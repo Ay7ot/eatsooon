@@ -75,72 +75,10 @@ This phase builds the main functionalities of the app.
     - Added `FoodItem` model and `InventoryService` with real-time Firestore streams and CRUD helpers.
     - Home screen now listens to inventory items for live statistics.
 
+- [x] **16. Build Inventory Screen:**
+    - Created full inventory management UI with statistics cards, filter tabs, search functionality.
+    - Implemented real-time item display with status badges, category emojis, and expiration tracking.
+    - Added skeleton loading states and responsive design matching Flutter UI.
+
 - [ ] **13. Implement Product Scanning:**
-    -   Integrate `expo-barcode-scanner` for scanning product barcodes.
-    -   Research and integrate a text recognition solution to scan expiration dates from images.
-
-- [ ] **14. Create Add/Edit Product Form:**
-    -   Build a form for users to manually add or edit product details (name, expiration date, quantity, etc.).
-
-- [ ] **15. Integrate Camera and Image Picker:**
-    -   Use `expo-camera` to allow users to take photos of their products.
-    -   Use `expo-image-picker` to allow users to select images from their gallery.
-
-## Phase 4: Family System
-
-This phase focuses on building the collaborative features of the app.
-
-- [ ] **17. Build Family Management UI:**
-    -   Create screens for:
-        -   Creating a new family.
-        -   Viewing family members.
-        -   Inviting new members.
-        -   Managing family settings (for admins).
-
-- [ ] **18. Implement Family Firestore Logic:**
-    -   Create services to handle:
-        -   Creating families (`families` collection).
-        -   Managing family members (`familyMembers` collection).
-        -   Sending, accepting, and declining invitations (`familyInvitations` collection).
-
-- [~] **19. Implement Family Activity Feed (In Progress):**
-    -   RecentActivity component created; family activity stream service stubbed. UI placeholders added; full screen still pending.
-
-- [ ] **20. Handle Family Switching (if applicable):**
-    -   If users can be part of multiple families, implement UI for them to switch between active families.
-
-## Phase 5: Notifications & Background Tasks
-
-This phase adds the sophisticated reminder system.
-
-- [ ] **21. Implement Notification Service:**
-    -   Create a service to manage local notifications using `expo-notifications`.
-    -   This service will handle requesting permissions and showing alerts.
-
-- [ ] **22. Implement Firestore for Alert State:**
-    -   Create a service to interact with the `users/{userId}/alerts` subcollection in Firestore.
-    -   This will be used to save a history of notifications and manage their `read` and `visible` state, ensuring consistency across app sessions.
-
-- [ ] **23. Implement Background Task for Notifications:**
-    -   Use `expo-task-manager` to register a periodic background task that runs once or twice daily.
-    -   This task will fetch the user's inventory, determine which items are expiring soon, and reconcile the notifications—showing new ones and hiding obsolete ones by updating their state in Firestore via the Alert Service.
-
-- [ ] **24. Configure Push Notifications (for Family System):**
-    -   Set up Firebase Cloud Messaging (FCM) to enable push notifications specifically for family invitations and other social interactions, as the expiration alerts are handled locally.
-
-## Phase 6: Finalization and Polish
-
-This phase focuses on improving the user experience and preparing the app for release.
-
-- [ ] **25. Add UI Polish:**
-    -   Implement loading indicators (e.g., shimmer effects).
-    -   Create user-friendly empty states and error messages.
-
-- [ ] **26. Implement Localization:**
-    -   Integrate a library like `i18next` to support multiple languages.
-
-- [ ] **27. Handle Permissions:**
-    -   Use Expo's permission APIs to gracefully request permissions for camera, notifications, and image library access.
-
-- [ ] **28. Conduct Thorough Testing:**
-    -   Perform comprehensive testing on both physical iOS and Android devices to ensure a consistent and bug-free experience. 
+    -   Integrate `expo-barcode-scanner`

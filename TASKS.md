@@ -20,6 +20,7 @@
 - [x] **10. Set up Main App Navigation (Tabs)**
 - [x] **11. Build the Home Screen UI**
 - [x] **12. Implement Firestore for Inventory (CRUD)**
+- [x] **16. Build Inventory Screen UI**
 - [ ] **13. Implement Product Scanning (Barcode & Text)**
 - [ ] **14. Create Add/Edit Product Form**
 - [ ] **15. Integrate Camera and Image Picker**

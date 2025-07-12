@@ -1,5 +1,6 @@
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Image,
     Pressable,
@@ -19,6 +20,7 @@ import { useAuth } from '../services/AuthContext';
 
 export default function SignUpScreen() {
     const { signUp } = useAuth();
+    const { t } = useTranslation();
     const router = useRouter();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -35,19 +37,19 @@ export default function SignUpScreen() {
     });
 
     const validateName = (text: string) => {
-        if (!text) return "Name is required.";
+        if (!text) return t('signup_name_required');
         return null;
     };
 
     const validateEmail = (text: string) => {
-        if (!text) return "Email is required.";
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) return "Please enter a valid email.";
+        if (!text) return t('signup_email_required');
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) return t('signup_email_invalid');
         return null;
     };
 
     const validatePassword = (text: string) => {
-        if (!text) return "Password is required.";
-        if (text.length < 6) return "Password must be at least 6 characters long.";
+        if (!text) return t('signup_password_required');
+        if (text.length < 6) return t('signup_password_short');
         return null;
     };
 
@@ -70,7 +72,7 @@ export default function SignUpScreen() {
 
         if (success) {
             setToast({
-                message: 'Account created successfully!',
+                message: t('signup_success'),
                 type: 'success',
                 visible: true,
             });
@@ -78,7 +80,7 @@ export default function SignUpScreen() {
             router.replace('/(tabs)');
         } else {
             setToast({
-                message: 'Failed to create account. Please try again.',
+                message: t('signup_failed'),
                 type: 'error',
                 visible: true,
             });
@@ -101,26 +103,24 @@ export default function SignUpScreen() {
                     style={styles.logo}
                     resizeMode="contain"
                 />
-                <Text style={[Typography.heading, { color: Colors.textPrimary }]}>Create Account</Text>
-                <Text style={[Typography.subtitle, { color: Colors.textSecondary, marginBottom: 24 }]}>
-                    Join us to start managing your inventory.
-                </Text>
+                <Text style={[Typography.heading, { color: Colors.textPrimary }]}>{t('signup_title')}</Text>
+                <Text style={[Typography.subtitle, { color: Colors.textSecondary, marginBottom: 24 }]}>{t('signup_subtitle')}</Text>
 
                 <CustomTextField
-                    hintText="Full Name"
+                    hintText={t('signup_name_hint')}
                     controller={{ value: name, onChangeText: setName }}
                     errorText={nameError}
                 />
 
                 <CustomTextField
-                    hintText="Email Address"
+                    hintText={t('signup_email_hint')}
                     controller={{ value: email, onChangeText: setEmail }}
                     keyboardType="email-address"
                     errorText={emailError}
                 />
 
                 <CustomTextField
-                    hintText="Password"
+                    hintText={t('signup_password_hint')}
                     controller={{ value: password, onChangeText: setPassword }}
                     isPassword={!isPasswordVisible}
                     suffixIcon={isPasswordVisible ? 'eye-off' : 'eye'}
@@ -128,13 +128,13 @@ export default function SignUpScreen() {
                     errorText={passwordError}
                 />
 
-                <LoadingButton title="Create Account" onPress={handleSignUp} loading={isLoading} />
+                <LoadingButton title={t('signup_create_button')} onPress={handleSignUp} loading={isLoading} />
 
                 <View style={styles.footer}>
-                    <Text style={styles.footerText}>Already have an account?</Text>
+                    <Text style={styles.footerText}>{t('signup_already_have_account')}</Text>
                     <Link href="/(auth)/sign-in" asChild>
                         <Pressable>
-                            <Text style={styles.footerLink}>Sign In</Text>
+                            <Text style={styles.footerLink}>{t('signup_login')}</Text>
                         </Pressable>
                     </Link>
                 </View>

@@ -16,6 +16,7 @@ interface AuthContextType {
     signIn: (email: string, password: string) => Promise<boolean>;
     signUp: (email: string, password: string, name: string) => Promise<boolean>;
     resetPassword: (email: string) => Promise<boolean>;
+    updateUserProfile: (name: string) => Promise<boolean>;
     signOut: () => Promise<void>;
 }
 
@@ -25,6 +26,7 @@ const AuthContext = createContext<AuthContextType>({
     signIn: async () => false,
     signUp: async () => false,
     resetPassword: async () => false,
+    updateUserProfile: async () => false,
     signOut: async () => { },
 });
 
@@ -85,6 +87,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     };
 
+    const updateUserProfile = async (name: string) => {
+        try {
+            if (!auth.currentUser) {
+                throw new Error("No user is currently signed in");
+            }
+            await updateProfile(auth.currentUser, {
+                displayName: name,
+            });
+            console.log('AuthContext - profile updated successfully');
+            return true;
+        } catch (error) {
+            console.error("Update profile error", error);
+            return false;
+        }
+    };
+
     const signOut = async () => {
         setIsLoading(true);
         try {
@@ -102,6 +120,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         signIn,
         signUp,
         resetPassword,
+        updateUserProfile,
         signOut,
     };
 

@@ -3,6 +3,7 @@ import { useAuth } from '@/src/services/AuthContext';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FlatList, Image, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import SvgIcon from '../../components/ui/SvgIcon';
 import { ActivityModel, activityColorValue, activityIconName, activityTimeAgo } from '../models/ActivityModel';
@@ -15,19 +16,36 @@ interface RecentActivityProps {
 
 export default function RecentActivity({ limit = 3, style }: RecentActivityProps) {
     const [activities, setActivities] = useState<ActivityModel[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const { user } = useAuth();
+    const { t } = useTranslation();
 
     useEffect(() => {
         if (!user) return;
-        const unsub = activityService.onActivitiesSnapshot({ limit, next: setActivities });
+        const unsub = activityService.onActivitiesSnapshot({
+            limit,
+            next: (acts) => {
+                setActivities(acts);
+                setIsLoading(false);
+            },
+        });
         return unsub;
     }, [limit, user]);
 
     if (!user) {
         return (
             <View style={style}>
-                <Text style={styles.title}>Recent Activity</Text>
-                <Text style={styles.emptyText}>Sign in to view recent activity.</Text>
+                <Text style={styles.title}>{t('profile_recent_activity')}</Text>
+                <Text style={styles.emptyText}>{t('recent_sign_in_required')}</Text>
+            </View>
+        );
+    }
+
+    if (isLoading) {
+        return (
+            <View style={style}>
+                <Text style={styles.title}>{t('profile_recent_activity')}</Text>
+                <ActivitySkeleton count={limit} />
             </View>
         );
     }
@@ -41,14 +59,14 @@ export default function RecentActivity({ limit = 3, style }: RecentActivityProps
                 style={styles.emptyIconWrapper}>
                 <MaterialIcons name="timeline" size={32} color={Colors.secondaryColor} />
             </LinearGradient>
-            <Text style={styles.emptyTitle}>No recent activity yet</Text>
-            <Text style={styles.emptySubtitle}>Your actions will show up here once you start using the app.</Text>
+            <Text style={styles.emptyTitle}>{t('recent_no_activity_yet')}</Text>
+            <Text style={styles.emptySubtitle}>{t('recent_empty_subtitle')}</Text>
         </View>
     );
 
     return (
         <View style={style}>
-            <Text style={styles.title}>Recent Activity</Text>
+            <Text style={styles.title}>{t('profile_recent_activity')}</Text>
             {activities.length === 0 ? (
                 renderEmptyState()
             ) : (
@@ -64,8 +82,21 @@ export default function RecentActivity({ limit = 3, style }: RecentActivityProps
     );
 }
 
+function ActivitySkeleton({ count }: { count: number }) {
+    return (
+        <View>
+            {Array.from({ length: count }).map((_, idx) => (
+                <View key={idx} style={styles.skeletonItem} />
+            ))}
+        </View>
+    );
+}
+
 function ActivityItem({ activity }: { activity: ActivityModel }) {
+    const { t } = useTranslation();
     const color = activityColorValue(activity.type);
+
+    const { title, subtitle } = localizeActivity(activity, t);
     return (
         <View style={styles.itemContainer}>
             <View style={[styles.iconContainer, { borderColor: color + '1A' }]}>
@@ -87,9 +118,9 @@ function ActivityItem({ activity }: { activity: ActivityModel }) {
                 )}
             </View>
             <View style={styles.content}>
-                <Text style={styles.activityTitle}>{activity.title}</Text>
-                {activity.subtitle ? (
-                    <Text style={styles.activitySubtitle}>{activity.subtitle}</Text>
+                <Text style={styles.activityTitle}>{title}</Text>
+                {subtitle ? (
+                    <Text style={styles.activitySubtitle}>{subtitle}</Text>
                 ) : null}
             </View>
             <View style={styles.rightColumn}>
@@ -100,6 +131,48 @@ function ActivityItem({ activity }: { activity: ActivityModel }) {
             </View>
         </View>
     );
+}
+
+function localizeActivity(activity: ActivityModel, t: any) {
+    switch (activity.type) {
+        case 'itemAdded':
+            return {
+                title: t('act_item_added_title', { item: activity.metadata?.itemName ?? '' }),
+                subtitle: t('act_item_added_sub'),
+            };
+        case 'itemDeleted':
+            return {
+                title: t('act_item_deleted_title', { item: activity.metadata?.itemName ?? '' }),
+                subtitle: t('act_item_deleted_sub'),
+            };
+        case 'itemUpdated':
+            return {
+                title: t('act_item_updated_title', { item: activity.metadata?.itemName ?? '' }),
+                subtitle: t('act_item_updated_sub'),
+            };
+        case 'recipeViewed':
+            return {
+                title: t('act_recipe_viewed_title', { recipe: activity.metadata?.recipeName ?? '' }),
+                subtitle: t('act_recipe_viewed_sub'),
+            };
+        case 'recipeFavorited':
+            return {
+                title: t('act_recipe_favorited_title', { recipe: activity.metadata?.recipeName ?? '' }),
+                subtitle: t('act_recipe_favorited_sub'),
+            };
+        case 'scanPerformed':
+            return {
+                title: t('act_scan_performed_title'),
+                subtitle: activity.metadata?.detectedItem ? `${activity.metadata.detectedItem}` : t('act_scan_performed_sub'),
+            };
+        case 'inventoryCleared':
+            return {
+                title: t('act_inventory_cleared_title', { count: activity.metadata?.itemCount ?? 0 }),
+                subtitle: t('act_inventory_cleared_sub'),
+            };
+        default:
+            return { title: activity.title, subtitle: activity.subtitle };
+    }
 }
 
 const styles = StyleSheet.create({
@@ -213,5 +286,11 @@ const styles = StyleSheet.create({
         color: Colors.textTertiary,
         textAlign: 'center',
         lineHeight: 20,
+    },
+    skeletonItem: {
+        height: 80,
+        borderRadius: 16,
+        backgroundColor: '#E5E7EB',
+        marginBottom: 12,
     },
 }); 

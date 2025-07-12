@@ -1,4 +1,5 @@
 import CustomAppBar from '@/components/ui/CustomAppBar';
+import FamilySwitcher from '@/components/ui/FamilySwitcher';
 import { Colors } from '@/constants/Colors';
 import RecentActivity from '@/src/components/RecentActivity';
 import { FoodItem } from '@/src/models/FoodItem';
@@ -8,11 +9,13 @@ import { inventoryService } from '@/src/services/InventoryService';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function HomeScreen() {
   const { user, signOut } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const handleSignOut = async () => {
     console.log('HomeScreen - signing out');
@@ -23,23 +26,30 @@ export default function HomeScreen() {
     router.push('/profile');
   };
 
-  const [items, setItems] = useState<FoodItem[]>([]);
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+  const [items, setItems] = useState<FoodItem[] | null>(null);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[] | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    const unsubItems = inventoryService.listenFoodItems(setItems);
+    const unsubItems = inventoryService.listenFoodItems((list) => {
+      setItems(list);
+    });
     (async () => {
       const familyId = await familyService.getCurrentFamilyId();
       if (familyId) {
-        const unsubFam = familyService.listenFamilyMembers(familyId, setFamilyMembers);
+        const unsubFam = familyService.listenFamilyMembers(familyId, (members) => {
+          setFamilyMembers(members);
+        });
         return () => unsubFam();
+      } else {
+        // Mark as loaded with no family connected
+        setFamilyMembers([]);
       }
     })();
     return () => unsubItems();
   }, [user]);
 
-  const stats = calculateStatistics(items);
+  const stats = items ? calculateStatistics(items) : { expiring: 0, total: 0 };
 
   function calculateStatistics(list: FoodItem[]) {
     const today = new Date();
@@ -57,56 +67,61 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <CustomAppBar title="Eatsooon" onSettingsPress={handleSettingsPress} />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Family Switcher moved into family section */}
         {/* Statistics Cards */}
         <View style={[styles.section, { marginTop: 24 }]}>
-          <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <View style={styles.statCardContent}>
-                <View style={styles.statHeader}>
-                  <Text style={styles.statLabel}>Expiring Soon</Text>
-                  <View style={[styles.statIcon, { backgroundColor: '#FEE2E2' }]}>
-                    <MaterialIcons name="warning" size={16} color={Colors.red} />
+          {items === null ? (
+            <HomeStatsSkeleton />
+          ) : (
+            <View style={styles.statsContainer}>
+              <View style={styles.statCard}>
+                <View style={styles.statCardContent}>
+                  <View style={styles.statHeader}>
+                    <Text style={styles.statLabel}>{t('home_expiring_soon')}</Text>
+                    <View style={[styles.statIcon, { backgroundColor: '#FEE2E2' }]}>
+                      <MaterialIcons name="warning" size={16} color={Colors.red} />
+                    </View>
+                  </View>
+                  <View style={styles.statValueContainer}>
+                    <Text style={[styles.statValue, { color: Colors.red }]}>{stats.expiring}</Text>
+                  </View>
+                  <View style={[styles.progressBar, { backgroundColor: Colors.red + '33' }]}>
+                    <View style={[styles.progressFill, { backgroundColor: Colors.red, width: '30%' }]} />
                   </View>
                 </View>
-                <View style={styles.statValueContainer}>
-                  <Text style={[styles.statValue, { color: Colors.red }]}>{stats.expiring}</Text>
-                </View>
-                <View style={[styles.progressBar, { backgroundColor: Colors.red + '33' }]}>
-                  <View style={[styles.progressFill, { backgroundColor: Colors.red, width: '30%' }]} />
-                </View>
               </View>
-            </View>
 
-            <View style={styles.statCard}>
-              <View style={styles.statCardContent}>
-                <View style={styles.statHeader}>
-                  <Text style={styles.statLabel}>Total Items</Text>
-                  <View style={[styles.statIcon, { backgroundColor: '#D1FAE5' }]}>
-                    <MaterialIcons name="inventory" size={16} color={Colors.secondaryColor} />
+              <View style={styles.statCard}>
+                <View style={styles.statCardContent}>
+                  <View style={styles.statHeader}>
+                    <Text style={styles.statLabel}>{t('home_total_items')}</Text>
+                    <View style={[styles.statIcon, { backgroundColor: '#D1FAE5' }]}>
+                      <MaterialIcons name="inventory" size={16} color={Colors.secondaryColor} />
+                    </View>
                   </View>
-                </View>
-                <View style={styles.statValueContainer}>
-                  <Text style={[styles.statValue, { color: Colors.secondaryColor }]}>{stats.total}</Text>
-                </View>
-                <View style={[styles.progressBar, { backgroundColor: Colors.secondaryColor + '33' }]}>
-                  <View style={[styles.progressFill, { backgroundColor: Colors.secondaryColor, width: '70%' }]} />
+                  <View style={styles.statValueContainer}>
+                    <Text style={[styles.statValue, { color: Colors.secondaryColor }]}>{stats.total}</Text>
+                  </View>
+                  <View style={[styles.progressBar, { backgroundColor: Colors.secondaryColor + '33' }]}>
+                    <View style={[styles.progressFill, { backgroundColor: Colors.secondaryColor, width: '70%' }]} />
+                  </View>
                 </View>
               </View>
             </View>
-          </View>
+          )}
         </View>
 
         {/* Quick Actions */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={styles.sectionTitle}>{t('home_quick_actions')}</Text>
           <View style={styles.quickActionsContainer}>
             <Pressable style={styles.primaryAction} onPress={() => router.push('/scan')}>
               <MaterialIcons name="qr-code-scanner" size={20} color={Colors.backgroundWhite} />
-              <Text style={styles.primaryActionText}>Scan Product</Text>
+              <Text style={styles.primaryActionText}>{t('home_scan_product')}</Text>
             </Pressable>
             <Pressable style={styles.secondaryAction} onPress={() => router.push('/recipes')}>
               <MaterialIcons name="menu-book" size={20} color={Colors.textSecondary} />
-              <Text style={styles.secondaryActionText}>Recipe Suggestions</Text>
+              <Text style={styles.secondaryActionText}>{t('home_recipe_suggestions')}</Text>
             </Pressable>
           </View>
         </View>
@@ -118,27 +133,65 @@ export default function HomeScreen() {
 
         {/* Family Members */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Family Members</Text>
+          <Text style={styles.sectionTitle}>{t('family_members_family_members')}</Text>
+          <FamilySwitcher />
+          <View style={{ height: 16 }} />
           <View style={styles.familyContainer}>
-            {familyMembers.length === 0 ? (
+            {familyMembers === null ? (
               <View style={styles.familyPlaceholder}>
                 <View style={styles.familyIconContainer}>
                   <MaterialIcons name="groups" size={28} color="#9CA3AF" />
                 </View>
-                <Text style={styles.familyPlaceholderTitle}>No family connected</Text>
-                <Text style={styles.familyPlaceholderSubtitle}>Connect with family to share your pantry</Text>
+                <Text style={styles.familyPlaceholderTitle}>{t('home_no_family_connected')}</Text>
+                <Text style={styles.familyPlaceholderSubtitle}>{t('home_family_subtitle')}</Text>
                 <Pressable style={styles.familyButton}>
-                  <Text style={styles.familyButtonText}>Get Started</Text>
+                  <Text style={styles.familyButtonText}>{t('home_get_started')}</Text>
                 </Pressable>
               </View>
             ) : (
               <View style={styles.familyGrid}>
                 {familyMembers.map((member, index) => (
                   <View key={index} style={styles.familyMemberCard}>
-                    <View style={styles.familyMemberIconContainer}>
-                      <MaterialIcons name="person" size={24} color="#4B5563" />
+                    <View
+                      style={[
+                        styles.familyMemberAvatar,
+                        {
+                          borderColor:
+                            member.role === 'admin' ? Colors.red : Colors.secondaryColor,
+                        },
+                      ]}>
+                      {member.profileImage ? (
+                        <Image source={{ uri: member.profileImage }} style={styles.familyMemberAvatarImage} />
+                      ) : (
+                        <Text style={styles.familyMemberAvatarText}>
+                          {member.displayName?.[0]?.toUpperCase() || 'U'}
+                        </Text>
+                      )}
+                      {member.role === 'admin' && (
+                        <View style={styles.adminBadge}>
+                          <MaterialIcons name="star" size={10} color="#FFFFFF" />
+                        </View>
+                      )}
                     </View>
-                    <Text style={styles.familyMemberName}>{member.displayName}</Text>
+                    <Text style={styles.familyMemberName} numberOfLines={1}>
+                      {member.displayName.split(' ')[0]}
+                    </Text>
+                    <View
+                      style={[
+                        styles.rolePill,
+                        {
+                          backgroundColor:
+                            (member.role === 'admin' ? Colors.red : Colors.secondaryColor) + '1A',
+                        },
+                      ]}>
+                      <Text
+                        style={[
+                          styles.rolePillText,
+                          { color: member.role === 'admin' ? Colors.red : Colors.secondaryColor },
+                        ]}>
+                        {member.role === 'admin' ? t('family_role_admin') : t('family_role_member')}
+                      </Text>
+                    </View>
                   </View>
                 ))}
               </View>
@@ -149,6 +202,16 @@ export default function HomeScreen() {
         {/* Bottom padding for tab bar */}
         <View style={{ height: 96 }} />
       </ScrollView>
+    </View>
+  );
+}
+
+function HomeStatsSkeleton() {
+  return (
+    <View style={styles.statsContainer}>
+      {[1, 2].map((idx) => (
+        <View key={idx} style={[styles.statCard, { backgroundColor: '#E5E7EB' }]} />
+      ))}
     </View>
   );
 }
@@ -344,19 +407,63 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   familyMemberIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E0E7FF',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
   },
   familyMemberName: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: 'Inter-Medium',
     fontWeight: '600',
     color: '#1F2937',
     marginTop: 8,
+    marginBottom: 2,
+  },
+  familyMemberAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F8FAFC',
+    position: 'relative',
+  },
+  familyMemberAvatarText: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 20,
+    color: '#6B7280',
+  },
+  familyMemberAvatarImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
+  adminBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: Colors.red,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: Colors.backgroundWhite,
+  },
+  rolePill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  rolePillText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 9,
+    textAlign: 'center',
   },
   familyPlaceholder: {
     alignItems: 'center',

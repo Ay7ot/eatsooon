@@ -9,6 +9,7 @@ import {
     Text,
     View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import CustomTextField from '../../components/ui/CustomTextField';
 import LoadingButton from '../../components/ui/LoadingButton';
@@ -19,6 +20,7 @@ import { useAuth } from '../services/AuthContext';
 
 export default function SignInScreen() {
     const { signIn } = useAuth();
+    const { t } = useTranslation();
     const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -33,14 +35,14 @@ export default function SignInScreen() {
     });
 
     const validateEmail = (text: string) => {
-        if (!text) return "Email is required.";
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) return "Please enter a valid email.";
+        if (!text) return t('login_email_required');
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) return t('login_email_invalid');
         return null;
     };
 
     const validatePassword = (text: string) => {
-        if (!text) return "Password is required.";
-        if (text.length < 6) return "Password must be at least 6 characters long.";
+        if (!text) return t('login_password_required');
+        if (text.length < 6) return t('login_password_short');
         return null;
     };
 
@@ -63,13 +65,13 @@ export default function SignInScreen() {
         console.log('SignInScreen - sign in result:', success);
         if (!success) {
             setToast({
-                message: 'Invalid email or password. Please try again.',
+                message: t('login_failed'),
                 type: 'error',
                 visible: true,
             });
         } else {
             setToast({
-                message: 'Welcome back! Signing you in...',
+                message: t('login_success'),
                 type: 'success',
                 visible: true,
             });
@@ -94,20 +96,20 @@ export default function SignInScreen() {
                     style={styles.logo}
                     resizeMode="contain"
                 />
-                <Text style={[Typography.heading, { color: Colors.textPrimary }]}>Welcome back</Text>
+                <Text style={[Typography.heading, { color: Colors.textPrimary }]}>{t('login_welcome_title')}</Text>
                 <Text style={[Typography.subtitle, { color: Colors.textSecondary, marginBottom: 24 }]}>
-                    Sign in to continue your inventory journey.
+                    {t('login_welcome_subtitle')}
                 </Text>
 
                 <CustomTextField
-                    hintText="Email Address"
+                    hintText={t('login_email_hint')}
                     controller={{ value: email, onChangeText: setEmail }}
                     keyboardType="email-address"
                     errorText={emailError}
                 />
 
                 <CustomTextField
-                    hintText="Password"
+                    hintText={t('login_password_hint')}
                     controller={{ value: password, onChangeText: setPassword }}
                     isPassword={!isPasswordVisible}
                     suffixIcon={isPasswordVisible ? 'eye-off' : 'eye'}
@@ -117,17 +119,17 @@ export default function SignInScreen() {
 
                 <Link href="/(auth)/forgot-password" asChild>
                     <Pressable>
-                        <Text style={styles.forgotPassword}>Forgot Password?</Text>
+                        <Text style={styles.forgotPassword}>{t('login_forget_password')}</Text>
                     </Pressable>
                 </Link>
 
-                <LoadingButton title="Continue" onPress={handleSignIn} loading={isLoading} />
+                <LoadingButton title={t('login_continue')} onPress={handleSignIn} loading={isLoading} />
 
                 <View style={styles.footer}>
-                    <Text style={styles.footerText}>Don't have an account?</Text>
+                    <Text style={styles.footerText}>{t('login_no_account')}</Text>
                     <Link href="/(auth)/sign-up" asChild>
                         <Pressable>
-                            <Text style={styles.footerLink}>Sign Up</Text>
+                            <Text style={styles.footerLink}>{t('login_signup')}</Text>
                         </Pressable>
                     </Link>
                 </View>

@@ -1,5 +1,6 @@
 import { Link } from 'expo-router';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Image,
     Pressable,
@@ -19,6 +20,7 @@ import { useAuth } from '../services/AuthContext';
 
 export default function ForgotPasswordScreen() {
     const { resetPassword } = useAuth();
+    const { t } = useTranslation();
     const [email, setEmail] = useState('');
     const [emailError, setEmailError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -29,8 +31,8 @@ export default function ForgotPasswordScreen() {
     });
 
     const validateEmail = (text: string) => {
-        if (!text) return "Email is required.";
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) return "Please enter a valid email.";
+        if (!text) return t('reset_password_email_required');
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) return t('reset_password_email_invalid');
         return null;
     };
 
@@ -48,13 +50,13 @@ export default function ForgotPasswordScreen() {
 
         if (success) {
             setToast({
-                message: 'Password reset email sent!',
+                message: t('reset_password_email_sent'),
                 type: 'success',
                 visible: true,
             });
         } else {
             setToast({
-                message: 'Failed to send reset email. Please try again.',
+                message: t('reset_password_email_failed'),
                 type: 'error',
                 visible: true,
             });
@@ -77,25 +79,23 @@ export default function ForgotPasswordScreen() {
                     style={styles.logo}
                     resizeMode="contain"
                 />
-                <Text style={[Typography.heading, { color: Colors.textPrimary }]}>Reset Password</Text>
-                <Text style={[Typography.subtitle, { color: Colors.textSecondary, marginBottom: 24 }]}>
-                    Enter your email address and we'll send you a link to reset your password.
-                </Text>
+                <Text style={[Typography.heading, { color: Colors.textPrimary }]}>{t('reset_password_title')}</Text>
+                <Text style={[Typography.subtitle, { color: Colors.textSecondary, marginBottom: 24 }]}>{t('reset_password_description')}</Text>
 
                 <CustomTextField
-                    hintText="Email Address"
+                    hintText={t('reset_password_email_label')}
                     controller={{ value: email, onChangeText: setEmail }}
                     keyboardType="email-address"
                     errorText={emailError}
                 />
 
-                <LoadingButton title="Send Reset Link" onPress={handleResetPassword} loading={isLoading} />
+                <LoadingButton title={t('reset_password_send')} onPress={handleResetPassword} loading={isLoading} />
 
                 <View style={styles.footer}>
-                    <Text style={styles.footerText}>Remember your password?</Text>
+                    <Text style={styles.footerText}>{t('login_continue')}</Text>
                     <Link href="/(auth)/sign-in" asChild>
                         <Pressable>
-                            <Text style={styles.footerLink}>Sign In</Text>
+                            <Text style={styles.footerLink}>{t('login_title')}</Text>
                         </Pressable>
                     </Link>
                 </View>
