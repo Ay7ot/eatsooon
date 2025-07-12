@@ -1,32 +1,25 @@
+import { useAuth } from '@/src/services/AuthContext';
 import { Redirect } from 'expo-router';
-import { useEffect } from 'react';
-import { useAuth } from '../src/services/AuthContext';
+import React from 'react';
+import { ActivityIndicator, View } from 'react-native';
 
-export default function IndexScreen() {
+export default function Index() {
     const { user, isLoading } = useAuth();
 
-    useEffect(() => {
-        console.log('IndexScreen - auth state changed:', {
-            user: user?.email || 'no user',
-            isLoading
-        });
-    }, [user, isLoading]);
-
-    console.log('IndexScreen - rendering with:', {
-        user: user?.email || 'no user',
-        isLoading
-    });
-
+    // Show loading spinner while checking auth state
     if (isLoading) {
-        console.log('IndexScreen - showing loading state');
-        return null; // Or a loading screen
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="large" />
+            </View>
+        );
     }
 
+    // If user is authenticated, redirect to home tabs
     if (user) {
-        console.log('IndexScreen - user authenticated, redirecting to tabs');
         return <Redirect href="/(tabs)" />;
     }
 
-    console.log('IndexScreen - no user, redirecting to sign-in');
-    return <Redirect href="/sign-in" />;
+    // If user is not authenticated, redirect to sign-in
+    return <Redirect href="/(auth)/sign-in" />;
 } 

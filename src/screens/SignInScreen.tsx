@@ -74,7 +74,7 @@ export default function SignInScreen() {
                 visible: true,
             });
             // Navigate to home after success
-            router.replace('/(tabs)/home');
+            router.replace('/(tabs)');
         }
     };
 
@@ -115,7 +115,7 @@ export default function SignInScreen() {
                     errorText={passwordError}
                 />
 
-                <Link href="/forgot-password" asChild>
+                <Link href="/(auth)/forgot-password" asChild>
                     <Pressable>
                         <Text style={styles.forgotPassword}>Forgot Password?</Text>
                     </Pressable>
@@ -125,7 +125,7 @@ export default function SignInScreen() {
 
                 <View style={styles.footer}>
                     <Text style={styles.footerText}>Don't have an account?</Text>
-                    <Link href="/sign-up" asChild>
+                    <Link href="/(auth)/sign-up" asChild>
                         <Pressable>
                             <Text style={styles.footerLink}>Sign Up</Text>
                         </Pressable>

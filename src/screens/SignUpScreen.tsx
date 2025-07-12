@@ -75,7 +75,7 @@ export default function SignUpScreen() {
                 visible: true,
             });
             // Navigate to home after success
-            router.replace('/(tabs)/home');
+            router.replace('/(tabs)');
         } else {
             setToast({
                 message: 'Failed to create account. Please try again.',
@@ -132,7 +132,7 @@ export default function SignUpScreen() {
 
                 <View style={styles.footer}>
                     <Text style={styles.footerText}>Already have an account?</Text>
-                    <Link href="/sign-in" asChild>
+                    <Link href="/(auth)/sign-in" asChild>
                         <Pressable>
                             <Text style={styles.footerLink}>Sign In</Text>
                         </Pressable>

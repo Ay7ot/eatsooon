@@ -93,7 +93,7 @@ export default function ForgotPasswordScreen() {
 
                 <View style={styles.footer}>
                     <Text style={styles.footerText}>Remember your password?</Text>
-                    <Link href="/sign-in" asChild>
+                    <Link href="/(auth)/sign-in" asChild>
                         <Pressable>
                             <Text style={styles.footerLink}>Sign In</Text>
                         </Pressable>
