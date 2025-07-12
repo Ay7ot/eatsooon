@@ -65,15 +65,15 @@ This phase implements the user authentication flow.
 
 This phase builds the main functionalities of the app.
 
-- [ ] **10. Set up Main Navigation:**
-    -   Implement a bottom tab navigator for the primary sections of the app (e.g., Home, Add Product, Profile, Families).
+- [x] **10. Set up Main Navigation:**
+    - Implemented bottom tab navigator with screens: Home, Inventory, Scan, Recipes, Profile.
 
-- [ ] **11. Build the Home Screen:**
-    -   Design the UI for the main dashboard, which will display the user's personal product inventory.
+- [x] **11. Build the Home Screen:**
+    - Recreated statistics cards, quick actions, recent activity component, and family members section to match Flutter UI.
 
-- [ ] **12. Implement Firestore Integration for Inventory:**
-    -   Define the database schema for the user's personal inventory (`inventory/{userId}/items/{itemId}`).
-    -   Create services to perform CRUD (Create, Read, Update, Delete) operations on inventory items in Firestore.
+- [x] **12. Implement Firestore Integration for Inventory:**
+    - Added `FoodItem` model and `InventoryService` with real-time Firestore streams and CRUD helpers.
+    - Home screen now listens to inventory items for live statistics.
 
 - [ ] **13. Implement Product Scanning:**
     -   Integrate `expo-barcode-scanner` for scanning product barcodes.
@@ -103,9 +103,8 @@ This phase focuses on building the collaborative features of the app.
         -   Managing family members (`familyMembers` collection).
         -   Sending, accepting, and declining invitations (`familyInvitations` collection).
 
-- [ ] **19. Implement Family Activity Feed:**
-    -   Create a screen to display the shared activity feed for a family.
-    -   Implement the logic to post and read activities from the `families/{familyId}/activities` subcollection.
+- [~] **19. Implement Family Activity Feed (In Progress):**
+    -   RecentActivity component created; family activity stream service stubbed. UI placeholders added; full screen still pending.
 
 - [ ] **20. Handle Family Switching (if applicable):**
     -   If users can be part of multiple families, implement UI for them to switch between active families.

@@ -17,9 +17,9 @@
 
 ## Phase 3: Core Application Features
 
-- [ ] **10. Set up Main App Navigation (Tabs)**
-- [ ] **11. Build the Home Screen UI**
-- [ ] **12. Implement Firestore for Inventory (CRUD)**
+- [x] **10. Set up Main App Navigation (Tabs)**
+- [x] **11. Build the Home Screen UI**
+- [x] **12. Implement Firestore for Inventory (CRUD)**
 - [ ] **13. Implement Product Scanning (Barcode & Text)**
 - [ ] **14. Create Add/Edit Product Form**
 - [ ] **15. Integrate Camera and Image Picker**
@@ -28,7 +28,7 @@
 
 - [ ] **17. Build Family Management UI**
 - [ ] **18. Implement Family Firestore Logic**
-- [ ] **19. Implement Family Activity Feed**
+- [ ] **19. Implement Family Activity Feed** (In Progress)
 - [ ] **20. Handle Family Switching Logic**
 
 ## Phase 5: Notifications & Background Tasks

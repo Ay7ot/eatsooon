@@ -24,7 +24,8 @@ try {
   auth = getAuth(app);
 }
 
-const db = getFirestore(app);
+// Use the named Firestore database (instead of the default) so we point to "eatsoon001" which matches the backend setup.
+const db = getFirestore(app, 'eatsoon001');
 
 export { auth, db };
 
