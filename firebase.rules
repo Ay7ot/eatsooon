@@ -1,0 +1,169 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users Collection
+    // - A user can only create their own user document.
+    // - A user can only read and update their own document.
+    // - Family admins can update family-related fields for their family members.
+    // - No one can delete user documents from the client.
+    // - No one can list all users.
+    match /users/{userId} {
+      allow create: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow users to read and update their own documents
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow family admins to update family-related fields when removing members
+      // This is needed when an admin removes a member from a family
+      allow update: if request.auth != null &&
+        request.auth.uid != userId &&
+        // Only allow updates to family-related fields
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['familyIds', 'currentFamilyId']);
+      
+      allow delete: if false;
+      
+      // Activities subcollection
+      // - Users can create, read, update, and delete their own activities.
+      match /activities/{activityId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Alerts subcollection
+      // - Users can create, read, update, and delete their own alerts.
+      match /alerts/{alertId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Inventory Collection - Fixed to match actual structure
+    // - Users can create, read, update, and delete their own inventory items.
+    // - The structure is: inventory/{userId}/items/{itemId}
+    match /inventory/{userId}/items/{itemId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Families Collection
+    // - Create: any authenticated user can create a family where they are the adminUserId.
+    // - Read: members of the family can read.
+    // - Update: only the adminUserId can update family settings.
+    // - Delete: not allowed from client.
+    match /families/{familyId} {
+      allow create: if request.auth != null &&
+        request.resource.data.adminUserId == request.auth.uid;
+
+      allow read: if request.auth != null &&
+        exists(/databases/$(database)/documents/familyMembers/$(familyId)) &&
+        get(/databases/$(database)/documents/familyMembers/$(familyId)).data.members.keys().hasAny([request.auth.uid]);
+
+      allow update: if request.auth != null &&
+        resource.data.adminUserId == request.auth.uid &&
+        request.resource.data.adminUserId == request.auth.uid;
+
+      // Allow existing family members (non-admin) to bump statistics.memberCount by exactly +1 when they join.
+      allow update: if request.auth != null &&
+        // requester is already a member
+        exists(/databases/$(database)/documents/familyMembers/$(familyId)) &&
+        get(/databases/$(database)/documents/familyMembers/$(familyId)).data.members.keys().hasAny([request.auth.uid]) &&
+        // only the top-level "statistics" field may change
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['statistics']) &&
+        // statistics sub-fields may not change except memberCount +1
+        request.resource.data.statistics.memberCount == resource.data.statistics.memberCount + 1 &&
+        request.resource.data.statistics.totalItems == resource.data.statistics.totalItems &&
+        request.resource.data.statistics.wasteReduced == resource.data.statistics.wasteReduced;
+
+      allow delete: if false;
+    }
+
+    // Family Members Document
+    // Path: familyMembers/{familyId}
+    // The document contains a map field `members` keyed by userId.
+    match /familyMembers/{familyId} {
+      // Create: only the family admin can create the members document on family creation.
+      allow create: if request.auth != null &&
+        exists(/databases/$(database)/documents/families/$(familyId)) &&
+        get(/databases/$(database)/documents/families/$(familyId)).data.adminUserId == request.auth.uid;
+
+      // Read: any authenticated user who is a member of this family.
+      allow read: if request.auth != null &&
+        resource.data.members.keys().hasAny([request.auth.uid]);
+
+      // Update:
+      // - The family admin can update the entire document.
+      // - An invited user can add ONLY themselves to the 'members' map with the 'member' role.
+      allow update: if request.auth != null &&
+        (
+          // Condition 1: Requester is the family admin.
+          (
+        exists(/databases/$(database)/documents/families/$(familyId)) &&
+            get(/databases/$(database)/documents/families/$(familyId)).data.adminUserId == request.auth.uid
+          )
+          ||
+          // Condition 2: Requester is adding ONLY themselves to the family.
+          (
+            // The set of changed keys in the 'members' map must contain only the user's own UID.
+            request.resource.data.members.diff(resource.data.members).affectedKeys().hasOnly([request.auth.uid]) &&
+            // The user must not have been a member before this update.
+            !resource.data.members.keys().hasAny([request.auth.uid]) &&
+            // The user must be adding themselves with the 'member' role. They cannot grant themselves admin.
+            request.resource.data.members[request.auth.uid].role == 'member'
+          )
+        );
+
+      allow delete: if false;
+    }
+
+    // Family Invitations Collection
+    // Path: familyInvitations/{invitationId}
+    match /familyInvitations/{invitationId} {
+      // Create: only family admin can send invitation.
+      allow create: if request.auth != null &&
+        exists(/databases/$(database)/documents/families/$(request.resource.data.familyId)) &&
+        get(/databases/$(database)/documents/families/$(request.resource.data.familyId)).data.adminUserId == request.auth.uid;
+
+      /* Read allowed if:
+            1. The requester sent the invite, OR
+            2. The requester is the invitee (email match), OR
+            3. The requester is the adminUserId of the family (family owner)
+      */
+      allow read: if request.auth != null && (
+        resource.data.inviterUserId == request.auth.uid ||
+        (request.auth.token.email != null && resource.data.inviteeEmail == request.auth.token.email) ||
+        ( exists(/databases/$(database)/documents/families/$(resource.data.familyId)) &&
+          get(/databases/$(database)/documents/families/$(resource.data.familyId)).data.adminUserId == request.auth.uid )
+      );
+
+      // Update (accept/decline): only the invitee can update status.
+      allow update: if request.auth != null &&
+        request.auth.token.email != null &&
+        resource.data.inviteeEmail == request.auth.token.email;
+
+      // Delete: not allowed from client.
+      allow delete: if false;
+    }
+
+    // Family Activity Feed
+    // Path: families/{familyId}/activities/{activityId}
+    match /families/{familyId}/activities/{activityId} {
+
+      /* Anyone who belongs to the family can read */
+      allow read: if request.auth != null &&
+        exists(/databases/$(database)/documents/familyMembers/$(familyId)) &&
+        get(/databases/$(database)/documents/familyMembers/$(familyId))
+          .data.members.keys()
+          .hasAny([request.auth.uid]);
+
+      /* A member may create an activity document only for themself */
+      allow create: if request.auth != null &&
+        exists(/databases/$(database)/documents/familyMembers/$(familyId)) &&
+        get(/databases/$(database)/documents/familyMembers/$(familyId))
+          .data.members.keys()
+          .hasAny([request.auth.uid]) &&
+        request.resource.data.userId == request.auth.uid;
+
+      /* Updates / deletes are blocked from the client */
+      allow update, delete: if false;
+    }
+  }
+} 

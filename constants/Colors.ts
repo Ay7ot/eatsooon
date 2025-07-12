@@ -1,26 +1,37 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Exact colors from the Figma design for pixel-perfect implementation.
+ * Sourced from: eatsoon/lib/core/theme/app_theme.dart
  */
-
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
-
 export const Colors = {
+  // Primary Colors - Green theme
+  primaryColor: '#2C7D4A', // Dark green - primary color
+  secondaryColor: '#0DE26D', // Bright green - secondary color
+  accentColor: '#FDE28E', // Yellow accent
+
+  // Status Colors
+  orange: '#F97316', // Orange for tomorrow/warning
+  red: '#EF4444', // Red for today/expired
+  green: '#78B242', // Green for UI elements (buttons, backgrounds)
+  freshGreen: '#0DE26D', // Green for fresh food status
+  greenWithOpacity: '#78B24233', // Green with 20% opacity
+
+  // Text Colors (Gray Scale)
+  textPrimary: '#1F2937', // Very dark gray for headings
+  textSecondary: '#4B5563', // Medium gray for secondary text
+  textTertiary: '#6B7280', // Light gray for tertiary text
+
+  // Background Colors
+  backgroundColor: '#F3F4F6', // Very light gray
+  backgroundWhite: '#FFFFFF', // Pure white
+  borderColor: '#E5E7EB', // Border color
+
+  // Theme maps for legacy components expecting Colors.light/Colors.dark structure
   light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    text: '#1F2937', // Same as textPrimary
+    background: '#F3F4F6', // Same as backgroundColor
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    text: '#FFFFFF', // fallback white text for dark mode
+    background: '#000000', // fallback dark background
   },
 };

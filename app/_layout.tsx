@@ -1,29 +1,43 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { AuthProvider } from '@/src/services/AuthContext';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import * as SplashScreen from 'expo-splash-screen';
+import React, { useEffect } from 'react';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    'Inter-Regular': require('@/src/assets/fonts/Inter-Regular.ttf'),
+    'Inter-Medium': require('@/src/assets/fonts/Inter-Medium.ttf'),
+    'Inter-SemiBold': require('@/src/assets/fonts/Inter-SemiBold.ttf'),
+    'Inter-Bold': require('@/src/assets/fonts/Inter-Bold.ttf'),
+    'Nunito-Regular': require('@/src/assets/fonts/Nunito-Regular.ttf'),
+    'Nunito-Medium': require('@/src/assets/fonts/Nunito-Medium.ttf'),
+    'Nunito-SemiBold': require('@/src/assets/fonts/Nunito-SemiBold.ttf'),
+    'Nunito-Bold': require('@/src/assets/fonts/Nunito-Bold.ttf'),
   });
 
+  useEffect(() => {
+    if (loaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded]);
+
   if (!loaded) {
-    // Async font loading only occurs in development.
     return null;
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
+    <AuthProvider>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="sign-up" />
+        <Stack.Screen name="forgot-password" />
+        <Stack.Screen name="sign-in" />
+        <Stack.Screen name="(tabs)" />
       </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    </AuthProvider>
   );
 }
