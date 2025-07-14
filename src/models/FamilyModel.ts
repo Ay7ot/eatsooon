@@ -35,7 +35,6 @@ export interface FamilyMember {
     familyId: string;
     displayName: string;
     email: string;
-    profileImage?: string;
     role: FamilyMemberRole;
     status: FamilyMemberStatus;
     joinedAt: Date;
@@ -70,7 +69,6 @@ export const familyMemberFromFirestore = (data: any, userId: string, familyId: s
         familyId,
         displayName: data.displayName || '',
         email: data.email || '',
-        profileImage: data.profileImage,
         role: data.role === 'admin' ? FamilyMemberRole.ADMIN : FamilyMemberRole.MEMBER,
         status: data.status === 'active' ? FamilyMemberStatus.ACTIVE :
             data.status === 'pending' ? FamilyMemberStatus.PENDING : FamilyMemberStatus.INACTIVE,
@@ -84,7 +82,6 @@ export const familyMemberToFirestore = (member: FamilyMember) => {
     return {
         displayName: member.displayName,
         email: member.email,
-        profileImage: member.profileImage,
         role: member.role,
         status: member.status,
         joinedAt: member.joinedAt,
@@ -152,7 +149,7 @@ export const familyInvitationToFirestore = (invitation: Omit<FamilyInvitation, '
         status: invitation.status,
         createdAt: invitation.createdAt,
         expiresAt: invitation.expiresAt,
-        respondedAt: invitation.respondedAt,
+        respondedAt: invitation.respondedAt || null,
     };
 };
 

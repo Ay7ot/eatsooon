@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Image,
+    KeyboardAvoidingView,
+    Platform,
     Pressable,
     SafeAreaView,
     ScrollView,
@@ -76,8 +78,8 @@ export default function SignUpScreen() {
                 type: 'success',
                 visible: true,
             });
-            // Navigate to home after success
-            router.replace('/(tabs)');
+            // Navigate new users to onboarding
+            router.replace('/onboarding');
         } else {
             setToast({
                 message: t('signup_failed'),
@@ -95,50 +97,57 @@ export default function SignUpScreen() {
                 visible={toast.visible}
                 onHide={() => setToast(prev => ({ ...prev, visible: false }))}
             />
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                keyboardShouldPersistTaps="handled">
-                <Image
-                    source={require('../../assets/images/logo.png')}
-                    style={styles.logo}
-                    resizeMode="contain"
-                />
-                <Text style={[Typography.heading, { color: Colors.textPrimary }]}>{t('signup_title')}</Text>
-                <Text style={[Typography.subtitle, { color: Colors.textSecondary, marginBottom: 24 }]}>{t('signup_subtitle')}</Text>
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            >
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}>
+                    <Image
+                        source={require('../../assets/images/logo.png')}
+                        style={styles.logo}
+                        resizeMode="contain"
+                    />
+                    <Text style={[Typography.heading, { color: Colors.textPrimary }]}>{t('signup_title')}</Text>
+                    <Text style={[Typography.subtitle, { color: Colors.textSecondary, marginBottom: 24 }]}>{t('signup_subtitle')}</Text>
 
-                <CustomTextField
-                    hintText={t('signup_name_hint')}
-                    controller={{ value: name, onChangeText: setName }}
-                    errorText={nameError}
-                />
+                    <CustomTextField
+                        hintText={t('signup_name_hint')}
+                        controller={{ value: name, onChangeText: setName }}
+                        errorText={nameError}
+                    />
 
-                <CustomTextField
-                    hintText={t('signup_email_hint')}
-                    controller={{ value: email, onChangeText: setEmail }}
-                    keyboardType="email-address"
-                    errorText={emailError}
-                />
+                    <CustomTextField
+                        hintText={t('signup_email_hint')}
+                        controller={{ value: email, onChangeText: setEmail }}
+                        keyboardType="email-address"
+                        errorText={emailError}
+                    />
 
-                <CustomTextField
-                    hintText={t('signup_password_hint')}
-                    controller={{ value: password, onChangeText: setPassword }}
-                    isPassword={!isPasswordVisible}
-                    suffixIcon={isPasswordVisible ? 'eye-off' : 'eye'}
-                    onSuffixIconPressed={() => setIsPasswordVisible(!isPasswordVisible)}
-                    errorText={passwordError}
-                />
+                    <CustomTextField
+                        hintText={t('signup_password_hint')}
+                        controller={{ value: password, onChangeText: setPassword }}
+                        isPassword={!isPasswordVisible}
+                        suffixIcon={isPasswordVisible ? 'eye-off' : 'eye'}
+                        onSuffixIconPressed={() => setIsPasswordVisible(!isPasswordVisible)}
+                        errorText={passwordError}
+                    />
 
-                <LoadingButton title={t('signup_create_button')} onPress={handleSignUp} loading={isLoading} />
+                    <LoadingButton title={t('signup_create_button')} onPress={handleSignUp} loading={isLoading} />
 
-                <View style={styles.footer}>
-                    <Text style={styles.footerText}>{t('signup_already_have_account')}</Text>
-                    <Link href="/(auth)/sign-in" asChild>
-                        <Pressable>
-                            <Text style={styles.footerLink}>{t('signup_login')}</Text>
-                        </Pressable>
-                    </Link>
-                </View>
-            </ScrollView>
+                    <View style={styles.footer}>
+                        <Text style={styles.footerText}>{t('signup_already_have_account')}</Text>
+                        <Link href="/(auth)/sign-in" asChild>
+                            <Pressable>
+                                <Text style={styles.footerLink}>{t('signup_login')}</Text>
+                            </Pressable>
+                        </Link>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }

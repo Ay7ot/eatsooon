@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Image,
+    KeyboardAvoidingView,
+    Platform,
     Pressable,
     SafeAreaView,
     ScrollView,
@@ -71,35 +73,42 @@ export default function ForgotPasswordScreen() {
                 visible={toast.visible}
                 onHide={() => setToast(prev => ({ ...prev, visible: false }))}
             />
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                keyboardShouldPersistTaps="handled">
-                <Image
-                    source={require('../../assets/images/logo.png')}
-                    style={styles.logo}
-                    resizeMode="contain"
-                />
-                <Text style={[Typography.heading, { color: Colors.textPrimary }]}>{t('reset_password_title')}</Text>
-                <Text style={[Typography.subtitle, { color: Colors.textSecondary, marginBottom: 24 }]}>{t('reset_password_description')}</Text>
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            >
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}>
+                    <Image
+                        source={require('../../assets/images/logo.png')}
+                        style={styles.logo}
+                        resizeMode="contain"
+                    />
+                    <Text style={[Typography.heading, { color: Colors.textPrimary }]}>{t('reset_password_title')}</Text>
+                    <Text style={[Typography.subtitle, { color: Colors.textSecondary, marginBottom: 24 }]}>{t('reset_password_description')}</Text>
 
-                <CustomTextField
-                    hintText={t('reset_password_email_label')}
-                    controller={{ value: email, onChangeText: setEmail }}
-                    keyboardType="email-address"
-                    errorText={emailError}
-                />
+                    <CustomTextField
+                        hintText={t('reset_password_email_label')}
+                        controller={{ value: email, onChangeText: setEmail }}
+                        keyboardType="email-address"
+                        errorText={emailError}
+                    />
 
-                <LoadingButton title={t('reset_password_send')} onPress={handleResetPassword} loading={isLoading} />
+                    <LoadingButton title={t('reset_password_send')} onPress={handleResetPassword} loading={isLoading} />
 
-                <View style={styles.footer}>
-                    <Text style={styles.footerText}>{t('login_continue')}</Text>
-                    <Link href="/(auth)/sign-in" asChild>
-                        <Pressable>
-                            <Text style={styles.footerLink}>{t('login_title')}</Text>
-                        </Pressable>
-                    </Link>
-                </View>
-            </ScrollView>
+                    <View style={styles.footer}>
+                        <Text style={styles.footerText}>{t('login_continue')}</Text>
+                        <Link href="/(auth)/sign-in" asChild>
+                            <Pressable>
+                                <Text style={styles.footerLink}>{t('login_title')}</Text>
+                            </Pressable>
+                        </Link>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }

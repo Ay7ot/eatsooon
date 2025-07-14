@@ -39,8 +39,18 @@ export class ActivityService {
     async logItemAdded(itemName: string, imageUrl?: string) {
         await this.logActivity({
             type: ActivityType.itemAdded,
-            title: `${itemName} added to pantry`,
-            subtitle: 'New item in your inventory',
+            title: 'act_item_added_title',
+            subtitle: 'act_item_added_sub',
+            imageUrl,
+            metadata: { itemName },
+        });
+    }
+
+    async logItemUpdated(itemName: string, imageUrl?: string) {
+        await this.logActivity({
+            type: ActivityType.itemUpdated,
+            title: 'act_item_updated_title',
+            subtitle: 'act_item_updated_sub',
             imageUrl,
             metadata: { itemName },
         });
@@ -49,8 +59,8 @@ export class ActivityService {
     async logItemDeleted(itemName: string, imageUrl?: string) {
         await this.logActivity({
             type: ActivityType.itemDeleted,
-            title: `${itemName} removed from pantry`,
-            subtitle: 'Item deleted from inventory',
+            title: 'act_item_deleted_title',
+            subtitle: 'act_item_deleted_sub',
             imageUrl,
             metadata: { itemName },
         });
@@ -59,8 +69,8 @@ export class ActivityService {
     async logRecipeViewed(recipeName: string, imageUrl?: string) {
         await this.logActivity({
             type: ActivityType.recipeViewed,
-            title: `Viewed ${recipeName} recipe`,
-            subtitle: 'Recipe details opened',
+            title: 'act_recipe_viewed_title',
+            subtitle: 'act_recipe_viewed_sub',
             imageUrl,
             metadata: { recipeName },
         });
@@ -69,8 +79,8 @@ export class ActivityService {
     async logRecipeFavorited(recipeName: string, imageUrl?: string) {
         await this.logActivity({
             type: ActivityType.recipeFavorited,
-            title: `Favorited ${recipeName}`,
-            subtitle: 'Recipe added to favorites',
+            title: 'act_recipe_favorited_title',
+            subtitle: 'act_recipe_favorited_sub',
             imageUrl,
             metadata: { recipeName },
         });
@@ -79,10 +89,10 @@ export class ActivityService {
     async logScanPerformed(detectedItem?: string, imageUrl?: string) {
         await this.logActivity({
             type: ActivityType.scanPerformed,
-            title: 'Product scanned',
-            subtitle: detectedItem ? `Detected: ${detectedItem}` : 'Barcode/text recognition performed',
+            title: 'act_scan_performed_title',
+            subtitle: 'act_scan_performed_sub',
             imageUrl,
-            metadata: { detectedItem },
+            metadata: detectedItem ? { detectedItem } : {},
         });
     }
 

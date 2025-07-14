@@ -2,6 +2,7 @@ import CustomAppBar from '@/components/ui/CustomAppBar';
 import FamilySwitcher from '@/components/ui/FamilySwitcher';
 import { Colors } from '@/constants/Colors';
 import RecentActivity from '@/src/components/RecentActivity';
+import { useAppInventory } from '@/src/hooks/useAppInventory';
 import { useLanguage } from '@/src/localization/LanguageContext';
 import { ActivityModel } from '@/src/models/ActivityModel';
 import { activityService } from '@/src/services/ActivityService';
@@ -40,6 +41,8 @@ export default function ProfileScreen() {
     const [isLanguageModalVisible, setIsLanguageModalVisible] = useState(false);
     const [isSignOutModalVisible, setIsSignOutModalVisible] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+
+    const { stats: inventoryStats, isLoading: isInventoryLoading } = useAppInventory('user');
 
     useEffect(() => {
         if (user) {
@@ -170,14 +173,13 @@ export default function ProfileScreen() {
     );
 
     if (!user) {
-        return (
-            <View style={styles.container}>
-                <CustomAppBar title="Eatsooon" />
-                <View style={styles.centerContent}>
-                    <Text style={styles.errorText}>User not found</Text>
-                </View>
-            </View>
-        );
+        // Redirect to sign-in if user is not authenticated
+        router.replace('/(auth)/sign-in');
+        return null;
+    }
+
+    if (isLoading) {
+        return <ProfileSkeleton />;
     }
 
     return (
@@ -209,21 +211,44 @@ export default function ProfileScreen() {
                     </View>
                 </View>
 
-                {/* Stats Cards */}
-                <View style={styles.statsContainer}>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statValue}>{userStats.itemsAdded}</Text>
-                        <Text style={styles.statLabel}>{t('profile_items_added')}</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statValue}>{userStats.recipesViewed}</Text>
-                        <Text style={styles.statLabel}>{t('profile_recipes_viewed')}</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statValue}>{userStats.daysActive}</Text>
-                        <Text style={styles.statLabel}>{t('profile_days_active')}</Text>
+                {/* ACTIVITY Stats Cards */}
+                <View style={styles.statsSection}>
+                    <Text style={styles.statsTitle}>{t('profile_activity_stats', 'Activity Stats')}</Text>
+                    <View style={styles.statsContainer}>
+                        <View style={styles.statCard}>
+                            <Text style={styles.statValue}>{userStats.itemsAdded}</Text>
+                            <Text style={styles.statLabel}>{t('profile_items_added')}</Text>
+                        </View>
+                        <View style={styles.statCard}>
+                            <Text style={styles.statValue}>{userStats.recipesViewed}</Text>
+                            <Text style={styles.statLabel}>{t('profile_recipes_viewed')}</Text>
+                        </View>
+                        <View style={styles.statCard}>
+                            <Text style={styles.statValue}>{userStats.daysActive}</Text>
+                            <Text style={styles.statLabel}>{t('profile_days_active')}</Text>
+                        </View>
                     </View>
                 </View>
+
+                {/* INVENTORY Stats Cards */}
+                <View style={styles.statsSection}>
+                    <Text style={styles.statsTitle}>{t('profile_pantry_stats', 'Your Pantry Stats')}</Text>
+                    <View style={styles.statsContainer}>
+                        <View style={styles.statCard}>
+                            <Text style={styles.statValue}>{inventoryStats.total}</Text>
+                            <Text style={styles.statLabel}>{t('profile_total_items', 'Your Items')}</Text>
+                        </View>
+                        <View style={styles.statCard}>
+                            <Text style={[styles.statValue, { color: Colors.red }]}>{inventoryStats.expired}</Text>
+                            <Text style={styles.statLabel}>{t('profile_items_expired', 'Items Expired')}</Text>
+                        </View>
+                        <View style={styles.statCard}>
+                            <Text style={[styles.statValue, { color: Colors.orange }]}>{inventoryStats.expiringSoon}</Text>
+                            <Text style={styles.statLabel}>{t('profile_expiring_soon', 'Expiring Soon')}</Text>
+                        </View>
+                    </View>
+                </View>
+
 
                 {/* Quick Actions */}
                 <View style={styles.section}>
@@ -309,6 +334,55 @@ export default function ProfileScreen() {
     );
 }
 
+function ProfileSkeleton() {
+    return (
+        <View style={styles.container}>
+            <CustomAppBar title="Eatsooon" />
+
+            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+                {/* Profile Header Skeleton */}
+                <View style={styles.profileHeader}>
+                    <View style={[styles.avatarContainer, { backgroundColor: '#E5E7EB' }]} />
+                    <View style={[styles.skeletonText, { width: 120, height: 20, marginTop: 16 }]} />
+                    <View style={[styles.skeletonText, { width: 180, height: 16, marginTop: 8 }]} />
+                </View>
+
+                {/* Stats Skeleton */}
+                <View style={[styles.section, { marginTop: 32 }]}>
+                    <View style={[styles.skeletonText, { width: 100, height: 18, marginBottom: 16 }]} />
+                    <View style={styles.statsGrid}>
+                        {[1, 2, 3].map((i) => (
+                            <View key={i} style={[styles.statCard, { backgroundColor: '#E5E7EB' }]} />
+                        ))}
+                    </View>
+                </View>
+
+                {/* Family Section Skeleton */}
+                <View style={[styles.section, { marginTop: 24 }]}>
+                    <View style={[styles.skeletonText, { width: 80, height: 18, marginBottom: 16 }]} />
+                    <View style={[styles.familySwitcherContainer, { backgroundColor: '#E5E7EB' }]} />
+                </View>
+
+                {/* Settings Section Skeleton */}
+                <View style={[styles.section, { marginTop: 24 }]}>
+                    <View style={[styles.skeletonText, { width: 70, height: 18, marginBottom: 16 }]} />
+                    {[1, 2, 3, 4].map((i) => (
+                        <View key={i} style={[styles.settingItem, { backgroundColor: '#E5E7EB', marginBottom: 12 }]} />
+                    ))}
+                </View>
+
+                {/* Recent Activity Skeleton */}
+                <View style={[styles.section, { marginTop: 24 }]}>
+                    <View style={[styles.skeletonText, { width: 120, height: 18, marginBottom: 16 }]} />
+                    {[1, 2, 3].map((i) => (
+                        <View key={i} style={[styles.activityCard, { backgroundColor: '#E5E7EB', marginBottom: 12 }]} />
+                    ))}
+                </View>
+            </ScrollView>
+        </View>
+    );
+}
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -366,10 +440,18 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: Colors.textSecondary,
     },
-    statsContainer: {
-        flexDirection: 'row',
+    statsSection: {
         paddingHorizontal: 20,
         marginBottom: 32,
+    },
+    statsTitle: {
+        fontFamily: 'Nunito-SemiBold',
+        fontSize: 18,
+        color: Colors.textPrimary,
+        marginBottom: 16,
+    },
+    statsContainer: {
+        flexDirection: 'row',
         gap: 16,
     },
     statCard: {
@@ -585,5 +667,11 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter-SemiBold',
         fontSize: 16,
         color: Colors.backgroundWhite,
+    },
+    // Skeleton styles
+    skeletonText: {
+        backgroundColor: '#E5E7EB',
+        borderRadius: 4,
+        alignSelf: 'center',
     },
 }); 

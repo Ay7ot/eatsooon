@@ -3,7 +3,7 @@ import { familyService } from '@/src/services/FamilyService';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface FamilyOption {
     id: string;
@@ -30,8 +30,23 @@ export default function FamilySwitcher() {
         fetchFamilies();
     }, []);
 
+    useEffect(() => {
+        // Listen to name changes for the current family (to reflect renames instantly)
+        if (!currentId) return;
+        const unsub = familyService.listenToFamily(currentId, (fam) => {
+            if (!fam) return;
+            setFamilies((prev) => prev.map((f) => (f.id === fam.id ? { ...f, name: fam.name } : f)));
+        });
+        return unsub;
+    }, [currentId]);
+
     if (loading)
-        return <ActivityIndicator size="small" color={Colors.secondaryColor} />;
+        return (
+            <View style={styles.switcher}>
+                <View style={[styles.avatar, { backgroundColor: '#E5E7EB' }]} />
+                <View style={[styles.skeletonText, { width: 80, height: 16 }]} />
+            </View>
+        );
 
     if (families.length === 0) return (
         <View style={styles.noFamiliesContainer}>
@@ -218,5 +233,11 @@ const styles = StyleSheet.create({
         height: 1,
         backgroundColor: Colors.borderColor,
         marginHorizontal: 4,
+    },
+    // Skeleton styles
+    skeletonText: {
+        backgroundColor: '#E5E7EB',
+        borderRadius: 4,
+        marginRight: 4,
     },
 }); 

@@ -20,9 +20,15 @@ import {
 } from 'react-native';
 
 export default function EditProfileScreen() {
-    const { user, updateUserProfile } = useAuth();
     const { t } = useTranslation();
+    const { user, updateUserProfile } = useAuth();
     const router = useRouter();
+
+    // Redirect to sign-in if not authenticated
+    if (!user) {
+        router.replace('/(auth)/sign-in');
+        return null;
+    }
 
     const [name, setName] = useState(user?.displayName || '');
     const [email, setEmail] = useState(user?.email || '');

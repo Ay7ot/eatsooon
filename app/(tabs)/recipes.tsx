@@ -40,7 +40,7 @@ export default function RecipesScreen() {
         setError(null);
 
         try {
-            // Get expiring items from inventory
+            // Get all items from inventory
             const items: FoodItem[] = await new Promise((resolve) => {
                 const unsubscribe = inventoryService.listenFoodItems((list) => {
                     unsubscribe();
@@ -48,16 +48,9 @@ export default function RecipesScreen() {
                 });
             });
 
-            // Filter to expiring soon items (within 5 days)
-            const today = new Date();
-            const expiringItems = items.filter((item) => {
-                const daysDiff = Math.floor((item.expirationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                return daysDiff >= 0 && daysDiff <= 5;
-            });
+            let ingredients = items.map(item => item.name);
 
-            let ingredients = expiringItems.map(item => item.name);
-
-            // Fallback ingredients if none expiring
+            // Fallback ingredients if pantry is empty
             if (ingredients.length === 0) {
                 setIsUsingFallback(true);
                 ingredients = ['Eggs', 'Milk', 'Bread', 'Tomato', 'Onion', 'Garlic', 'Chicken'];

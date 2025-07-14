@@ -21,16 +21,16 @@
 - [x] **11. Build the Home Screen UI**
 - [x] **12. Implement Firestore for Inventory (CRUD)**
 - [x] **16. Build Inventory Screen UI**
-- [ ] **13. Implement Product Scanning (Barcode & Text)**
-- [ ] **14. Create Add/Edit Product Form**
-- [ ] **15. Integrate Camera and Image Picker**
+- [x] **13. Implement Product Scanning (Barcode & Text)**
+- [x] **14. Create Add/Edit Product Form**
+- [x] **15. Integrate Camera and Image Picker**
 
 ## Phase 4: Family System
 
-- [ ] **17. Build Family Management UI**
-- [ ] **18. Implement Family Firestore Logic**
-- [ ] **19. Implement Family Activity Feed** (In Progress)
-- [ ] **20. Handle Family Switching Logic**
+- [x] **17. Build Family Management UI**
+- [x] **18. Implement Family Firestore Logic**
+- [x] **19. Implement Family Activity Feed** (In Progress)
+- [x] **20. Handle Family Switching Logic**
 
 ## Phase 5: Notifications & Background Tasks
 
@@ -41,7 +41,7 @@
 
 ## Phase 6: Finalization and Polish
 
-- [ ] **25. Add UI Polish (Loaders, Empty States)**
-- [ ] **26. Implement Localization**
+- [x] **25. Add UI Polish (Loaders, Empty States)**
+- [x] **26. Implement Localization**
 - [ ] **27. Handle App Permissions**
 - [ ] **28. Conduct Thorough Testing** 

@@ -1,5 +1,6 @@
 import CustomAppBar from '@/components/ui/CustomAppBar';
 import { Colors } from '@/constants/Colors';
+import { useAppInventory } from '@/src/hooks/useAppInventory';
 import {
     FamilyInvitation,
     FamilyMember,
@@ -16,20 +17,28 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
-    Alert,
-    Image,
     Modal,
+    Platform,
     Pressable,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     TextInput,
-    View,
+    View
 } from 'react-native';
 
 export default function FamilyMembersScreen() {
     const { t } = useTranslation();
     const { user } = useAuth();
+    const { stats: inventoryStats, isLoading: isInventoryLoading } = useAppInventory('family');
+
+    // Redirect to sign-in if not authenticated
+    if (!user) {
+        router.replace('/(auth)/sign-in');
+        return null;
+    }
+
     const [currentFamily, setCurrentFamily] = useState<FamilyModel | null>(null);
     const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
     const [pendingInvitations, setPendingInvitations] = useState<FamilyInvitation[]>([]);
@@ -40,16 +49,68 @@ export default function FamilyMembersScreen() {
     const [createFamilyModal, setCreateFamilyModal] = useState(false);
     const [inviteMemberModal, setInviteMemberModal] = useState(false);
     const [joinFamilyModal, setJoinFamilyModal] = useState(false);
+    const [confirmRemoveModal, setConfirmRemoveModal] = useState(false);
+    // Edit family name
+    const [editNameModal, setEditNameModal] = useState(false);
+    const [confirmDeleteFamilyModal, setConfirmDeleteFamilyModal] = useState(false);
+    const [newFamilyName, setNewFamilyName] = useState('');
+    const [messageModal, setMessageModal] = useState<{
+        visible: boolean;
+        type: 'success' | 'error';
+        title: string;
+        message: string;
+    }>({
+        visible: false,
+        type: 'success',
+        title: '',
+        message: ''
+    });
 
     // Form states
     const [familyName, setFamilyName] = useState('');
     const [memberEmail, setMemberEmail] = useState('');
     const [invitationCode, setInvitationCode] = useState('');
     const [formLoading, setFormLoading] = useState(false);
+    const [memberToRemove, setMemberToRemove] = useState<FamilyMember | null>(null);
 
     useEffect(() => {
-        loadFamilyData();
-    }, []);
+        let cleanup: (() => void) | undefined;
+
+        const initializeData = async () => {
+            cleanup = await loadFamilyData();
+        };
+
+        initializeData();
+
+        return () => {
+            if (cleanup) {
+                cleanup();
+            }
+        };
+    }, [user]);
+
+    // Helper functions for showing modals
+    const showSuccessMessage = (title: string, message: string) => {
+        setMessageModal({
+            visible: true,
+            type: 'success',
+            title,
+            message
+        });
+    };
+
+    const showErrorMessage = (title: string, message: string) => {
+        setMessageModal({
+            visible: true,
+            type: 'error',
+            title,
+            message
+        });
+    };
+
+    const hideMessageModal = () => {
+        setMessageModal(prev => ({ ...prev, visible: false }));
+    };
 
     const loadFamilyData = async () => {
         try {
@@ -62,19 +123,36 @@ export default function FamilyMembersScreen() {
                 const family = await familyService.getFamily(familyId);
                 setCurrentFamily(family);
 
+                let unsubscribeInvitations: (() => void) | null = null;
+
                 // Listen to family members
                 const unsubscribeMembers = familyService.listenToFamilyMembers(familyId, (members) => {
                     setFamilyMembers(members);
+
+                    const currentUserIsAdmin = members.some(m => m.userId === user?.uid && isAdmin(m));
+
+                    // If user is admin and we don't have a listener yet, create one.
+                    if (currentUserIsAdmin && !unsubscribeInvitations) {
+                        unsubscribeInvitations = familyService.listenToPendingInvitations(familyId, (invitations) => {
+                            setPendingInvitations(invitations);
+                        });
+                    }
+                    // If user is NOT admin, clear invitations and unsubscribe if we had a listener.
+                    else if (!currentUserIsAdmin) {
+                        setPendingInvitations([]);
+                        if (unsubscribeInvitations) {
+                            unsubscribeInvitations();
+                            unsubscribeInvitations = null;
+                        }
+                    }
                 });
 
-                // Listen to pending invitations
-                const unsubscribeInvitations = familyService.listenToPendingInvitations(familyId, (invitations) => {
-                    setPendingInvitations(invitations);
-                });
 
                 return () => {
                     unsubscribeMembers();
-                    unsubscribeInvitations();
+                    if (unsubscribeInvitations) {
+                        unsubscribeInvitations();
+                    }
                 };
             }
         } catch (error) {
@@ -86,24 +164,24 @@ export default function FamilyMembersScreen() {
 
     const handleCreateFamily = async () => {
         if (!familyName.trim()) {
-            Alert.alert('Error', t('family_members_name_required'));
+            showErrorMessage('Error', t('family_members_name_required'));
             return;
         }
 
         if (familyName.trim().length < 3) {
-            Alert.alert('Error', t('family_members_name_short'));
+            showErrorMessage('Error', t('family_members_name_short'));
             return;
         }
 
+        setFormLoading(true);
         try {
-            setFormLoading(true);
             await familyService.createFamily(familyName.trim());
             setCreateFamilyModal(false);
             setFamilyName('');
-            Alert.alert('Success', t('family_members_created_success'));
-            loadFamilyData();
+            await loadFamilyData(); // Re-load data to show the new family
+            showSuccessMessage('Success!', t('family_members_created_success'));
         } catch (error) {
-            Alert.alert('Error', t('family_members_create_failed') + (error as Error).message);
+            showErrorMessage('Creation Failed', (error as Error).message);
         } finally {
             setFormLoading(false);
         }
@@ -111,26 +189,26 @@ export default function FamilyMembersScreen() {
 
     const handleInviteMember = async () => {
         if (!memberEmail.trim()) {
-            Alert.alert('Error', t('family_members_email_required'));
+            showErrorMessage('Error', t('family_members_email_required'));
             return;
         }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(memberEmail.trim())) {
-            Alert.alert('Error', t('family_members_email_invalid'));
+            showErrorMessage('Error', t('family_members_email_invalid'));
             return;
         }
 
         if (!currentFamilyId) return;
 
+        setFormLoading(true);
         try {
-            setFormLoading(true);
             await familyService.inviteMember(currentFamilyId, memberEmail.trim());
             setInviteMemberModal(false);
             setMemberEmail('');
-            Alert.alert('Success', t('family_members_invite_sent'));
+            showSuccessMessage('Success', t('family_members_invite_sent'));
         } catch (error) {
-            Alert.alert('Error', t('family_members_invite_failed') + (error as Error).message);
+            showErrorMessage('Invite Failed', (error as Error).message);
         } finally {
             setFormLoading(false);
         }
@@ -138,45 +216,54 @@ export default function FamilyMembersScreen() {
 
     const handleJoinFamily = async () => {
         if (!invitationCode.trim()) {
-            Alert.alert('Error', 'Please enter the invitation code');
+            showErrorMessage('Error', 'Please enter the invitation code');
             return;
         }
 
+        setFormLoading(true);
         try {
-            setFormLoading(true);
             await familyService.acceptInvitation(invitationCode.trim());
             setJoinFamilyModal(false);
             setInvitationCode('');
-            Alert.alert('Success', 'Successfully joined family!');
-            loadFamilyData();
+            await loadFamilyData();
+            showSuccessMessage('Success!', 'Successfully joined family!');
         } catch (error) {
-            Alert.alert('Error', 'Failed to join family: ' + (error as Error).message);
+            showErrorMessage('Join Failed', 'Failed to join family: ' + (error as Error).message);
         } finally {
             setFormLoading(false);
         }
     };
 
     const handleRemoveMember = (member: FamilyMember) => {
-        Alert.alert(
-            t('family_members_remove_dialog_title'),
-            t('family_members_remove_dialog_desc').replace('{{name}}', member.displayName),
-            [
-                { text: t('family_members_cancel'), style: 'cancel' },
-                {
-                    text: t('family_members_remove'),
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            if (!currentFamilyId) return;
-                            await familyService.removeMember(currentFamilyId, member.userId);
-                            Alert.alert('Success', t('family_members_removed_success').replace('{{name}}', member.displayName));
-                        } catch (error) {
-                            Alert.alert('Error', t('family_members_remove_failed') + (error as Error).message);
-                        }
-                    },
-                },
-            ]
-        );
+        setMemberToRemove(member);
+        setConfirmRemoveModal(true);
+    };
+
+    const confirmRemoveMember = async () => {
+        if (!memberToRemove || !currentFamilyId) return;
+
+        try {
+            await familyService.removeMember(currentFamilyId, memberToRemove.userId);
+            setConfirmRemoveModal(false);
+            setMemberToRemove(null);
+            showSuccessMessage('Success', t('family_members_removed_success').replace('{{name}}', memberToRemove.displayName));
+        } catch (error) {
+            showErrorMessage('Error', t('family_members_remove_failed') + (error as Error).message);
+        }
+    };
+
+    const handleDeleteFamily = async () => {
+        if (!currentFamilyId) return;
+
+        try {
+            await familyService.deleteFamily(currentFamilyId);
+            setConfirmDeleteFamilyModal(false);
+            showSuccessMessage('Success', 'Family has been deleted.');
+            // After deletion, re-load data. The user will see the "No Family" state.
+            loadFamilyData();
+        } catch (error) {
+            showErrorMessage('Error', 'Failed to delete family: ' + (error as Error).message);
+        }
     };
 
     const formatDate = (date: Date): string => {
@@ -185,21 +272,34 @@ export default function FamilyMembersScreen() {
     };
 
     const getTimeAgo = (date: Date): string => {
+        // Add debugging
+        console.log('getTimeAgo - input date:', date);
+        console.log('getTimeAgo - date type:', typeof date);
+        console.log('getTimeAgo - is valid date:', date instanceof Date && !isNaN(date.getTime()));
+
+        // Handle invalid dates
+        if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+            console.log('getTimeAgo - invalid date, returning fallback');
+            return t('family_members_just_now');
+        }
+
         const now = new Date();
         const diff = now.getTime() - date.getTime();
         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
         const hours = Math.floor(diff / (1000 * 60 * 60));
         const minutes = Math.floor(diff / (1000 * 60));
 
+        console.log('getTimeAgo - diff:', diff, 'days:', days, 'hours:', hours, 'minutes:', minutes);
+
         if (days > 0) {
-            return days === 1 ? t('family_members_day_ago').replace('{{count}}', '1') :
-                t('family_members_days_ago').replace('{{count}}', days.toString());
+            return days === 1 ? t('family_members_day_ago', { count: 1 }) :
+                t('family_members_days_ago', { count: days });
         } else if (hours > 0) {
-            return hours === 1 ? t('family_members_hour_ago').replace('{{count}}', '1') :
-                t('family_members_hours_ago').replace('{{count}}', hours.toString());
+            return hours === 1 ? t('family_members_hour_ago', { count: 1 }) :
+                t('family_members_hours_ago', { count: hours });
         } else if (minutes > 0) {
-            return minutes === 1 ? t('family_members_minute_ago').replace('{{count}}', '1') :
-                t('family_members_minutes_ago').replace('{{count}}', minutes.toString());
+            return minutes === 1 ? t('family_members_minute_ago', { count: 1 }) :
+                t('family_members_minutes_ago', { count: minutes });
         } else {
             return t('family_members_just_now');
         }
@@ -209,15 +309,7 @@ export default function FamilyMembersScreen() {
     const isCurrentUserAdmin = currentUserMember ? isAdmin(currentUserMember) : false;
 
     if (loading) {
-        return (
-            <View style={styles.container}>
-                <CustomAppBar title="Eatsooon" />
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={Colors.secondaryColor} />
-                    <Text style={styles.loadingText}>{t('family_members_loading')}</Text>
-                </View>
-            </View>
-        );
+        return <FamilyMembersSkeleton />;
     }
 
     return (
@@ -246,7 +338,7 @@ export default function FamilyMembersScreen() {
                         <Text style={styles.noFamilyDescription}>{t('family_members_no_family_desc')}</Text>
 
                         <Pressable style={styles.primaryButton} onPress={() => setCreateFamilyModal(true)}>
-                            <Text style={styles.primaryButtonText}>{t('family_members_create')}</Text>
+                            <Text style={styles.primaryButtonText}>{t('family_members_create_family')}</Text>
                         </Pressable>
 
                         <Pressable style={styles.secondaryButton} onPress={() => setJoinFamilyModal(true)}>
@@ -262,25 +354,48 @@ export default function FamilyMembersScreen() {
                                 <View style={styles.familyAvatar}>
                                     <MaterialIcons name="groups" size={40} color={Colors.secondaryColor} />
                                 </View>
-                                <Text style={styles.familyName}>{currentFamily.name}</Text>
+                                <View style={styles.familyNameRow}>
+                                    <Text style={styles.familyName}>{currentFamily.name}</Text>
+                                    {isCurrentUserAdmin && (
+                                        <Pressable onPress={() => {
+                                            setNewFamilyName(currentFamily.name);
+                                            setEditNameModal(true);
+                                        }}>
+                                            <MaterialIcons name="edit" size={18} color={Colors.textSecondary} />
+                                        </Pressable>
+                                    )}
+                                </View>
                                 <Text style={styles.familyDescription}>
                                     {t('family_members_managing_pantry').replace('{{date}}', formatDate(currentFamily.createdAt))}
                                 </Text>
                             </View>
                         )}
 
-                        {/* Family Stats */}
-                        <View style={styles.statsContainer}>
-                            <View style={styles.statItem}>
-                                <Text style={[styles.statValue, { color: Colors.secondaryColor }]}>{familyMembers.length}</Text>
-                                <Text style={styles.statLabel}>{t('family_members_members')}</Text>
-                            </View>
-                            <View style={styles.statDivider} />
-                            <View style={styles.statItem}>
-                                <Text style={[styles.statValue, { color: Colors.orange }]}>0</Text>
-                                <Text style={styles.statLabel}>{t('family_members_items_added')}</Text>
-                            </View>
+                        {/* Family Inventory Stats */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>{t('family_inventory_stats_title', "Family's Pantry")}</Text>
+                            {isInventoryLoading ? (
+                                <View style={[styles.statsContainer, { backgroundColor: '#F3F4F6' }]} />
+                            ) : (
+                                <View style={styles.statsContainer}>
+                                    <View style={styles.statItem}>
+                                        <Text style={[styles.statValue, { color: Colors.secondaryColor }]}>{inventoryStats.total}</Text>
+                                        <Text style={styles.statLabel}>{t('inventory_total')}</Text>
+                                    </View>
+                                    <View style={styles.statDivider} />
+                                    <View style={styles.statItem}>
+                                        <Text style={[styles.statValue, { color: Colors.orange }]}>{inventoryStats.expiringSoon}</Text>
+                                        <Text style={styles.statLabel}>{t('inventory_expiring')}</Text>
+                                    </View>
+                                    <View style={styles.statDivider} />
+                                    <View style={styles.statItem}>
+                                        <Text style={[styles.statValue, { color: Colors.red }]}>{inventoryStats.expired}</Text>
+                                        <Text style={styles.statLabel}>{t('inventory_tab_expired')}</Text>
+                                    </View>
+                                </View>
+                            )}
                         </View>
+
 
                         {/* Members Section */}
                         <View style={styles.section}>
@@ -289,19 +404,15 @@ export default function FamilyMembersScreen() {
                             {familyMembers.map((member) => (
                                 <View key={member.userId} style={styles.memberCard}>
                                     <View style={styles.memberAvatar}>
-                                        {member.profileImage ? (
-                                            <Image source={{ uri: member.profileImage }} style={styles.avatarImage} />
-                                        ) : (
-                                            <Text style={styles.avatarText}>
-                                                {member.displayName.charAt(0).toUpperCase()}
-                                            </Text>
-                                        )}
+                                        <Text style={styles.avatarText}>
+                                            {member.displayName.charAt(0).toUpperCase()}
+                                        </Text>
                                     </View>
                                     <View style={styles.memberInfo}>
                                         <Text style={styles.memberName}>{member.displayName}</Text>
                                         <Text style={styles.memberEmail}>{member.email}</Text>
                                         <Text style={styles.memberJoined}>
-                                            {t('family_members_joined').replace('{{time}}', getTimeAgo(member.joinedAt))}
+                                            {t('family_members_joined').replace('{{timeAgo}}', getTimeAgo(member.joinedAt))}
                                         </Text>
                                     </View>
                                     <View style={styles.memberActions}>
@@ -357,6 +468,18 @@ export default function FamilyMembersScreen() {
                                 <Text style={styles.actionButtonSecondaryText}>{t('family_members_invite_member')}</Text>
                             </Pressable>
                         </View>
+
+                        {isCurrentUserAdmin && (
+                            <View style={{ marginTop: 12 }}>
+                                <Pressable
+                                    style={styles.dangerButton}
+                                    onPress={() => setConfirmDeleteFamilyModal(true)}
+                                >
+                                    <MaterialIcons name="delete-forever" size={18} color={Colors.red} />
+                                    <Text style={styles.dangerButtonText}>Delete Family</Text>
+                                </Pressable>
+                            </View>
+                        )}
                     </View>
                 )}
             </ScrollView>
@@ -398,7 +521,7 @@ export default function FamilyMembersScreen() {
                                 {formLoading ? (
                                     <ActivityIndicator size="small" color={Colors.backgroundWhite} />
                                 ) : (
-                                    <Text style={styles.modalButtonPrimaryText}>{t('family_members_create')}</Text>
+                                    <Text style={styles.modalButtonPrimaryText}>{t('family_members_create_family')}</Text>
                                 )}
                             </Pressable>
                         </View>
@@ -497,6 +620,223 @@ export default function FamilyMembersScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {/* Confirm Remove Member Modal */}
+            <Modal
+                visible={confirmRemoveModal}
+                transparent
+                animationType="fade"
+                statusBarTranslucent={true}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={[styles.modalIcon, { backgroundColor: Colors.red + '20' }]}>
+                            <MaterialIcons name="person-remove" size={32} color={Colors.red} />
+                        </View>
+                        <Text style={styles.modalTitle}>{t('family_members_remove_dialog_title')}</Text>
+                        <Text style={styles.modalDescription}>
+                            {memberToRemove && t('family_members_remove_dialog_desc').replace('{{name}}', memberToRemove.displayName)}
+                        </Text>
+
+                        <View style={styles.modalButtons}>
+                            <Pressable
+                                style={styles.modalButtonSecondary}
+                                onPress={() => {
+                                    setConfirmRemoveModal(false);
+                                    setMemberToRemove(null);
+                                }}
+                            >
+                                <Text style={styles.modalButtonSecondaryText}>{t('family_members_cancel')}</Text>
+                            </Pressable>
+                            <Pressable
+                                style={[styles.modalButtonPrimary, { backgroundColor: Colors.red }]}
+                                onPress={confirmRemoveMember}
+                            >
+                                <Text style={styles.modalButtonPrimaryText}>{t('family_members_remove')}</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Confirm Delete Family Modal */}
+            <Modal
+                visible={confirmDeleteFamilyModal}
+                transparent
+                animationType="fade"
+                statusBarTranslucent={true}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={[styles.modalIcon, { backgroundColor: Colors.red + '20' }]}>
+                            <MaterialIcons name="warning" size={32} color={Colors.red} />
+                        </View>
+                        <Text style={styles.modalTitle}>Delete Family</Text>
+                        <Text style={styles.modalDescription}>
+                            Are you sure you want to permanently delete this family? This action cannot be undone. All members will be removed and all shared data will be lost.
+                        </Text>
+
+                        <View style={styles.modalButtons}>
+                            <Pressable
+                                style={styles.modalButtonSecondary}
+                                onPress={() => setConfirmDeleteFamilyModal(false)}
+                            >
+                                <Text style={styles.modalButtonSecondaryText}>Cancel</Text>
+                            </Pressable>
+                            <Pressable
+                                style={[styles.modalButtonPrimary, { backgroundColor: Colors.red }]}
+                                onPress={handleDeleteFamily}
+                            >
+                                <Text style={styles.modalButtonPrimaryText}>Delete</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Edit Name Modal */}
+            <Modal visible={editNameModal} transparent animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalIcon}>
+                            <MaterialIcons name="edit" size={32} color={Colors.secondaryColor} />
+                        </View>
+                        <Text style={styles.modalTitle}>{t('family_members_edit_name_title', 'Edit Family Name')}</Text>
+
+                        <TextInput
+                            style={styles.textInput}
+                            placeholder={t('family_members_family_name')}
+                            value={newFamilyName}
+                            onChangeText={setNewFamilyName}
+                            placeholderTextColor={Colors.textTertiary}
+                        />
+
+                        <View style={styles.modalButtons}>
+                            <Pressable
+                                style={styles.modalButtonSecondary}
+                                onPress={() => setEditNameModal(false)}
+                                disabled={formLoading}
+                            >
+                                <Text style={styles.modalButtonSecondaryText}>{t('family_members_cancel')}</Text>
+                            </Pressable>
+                            <Pressable
+                                style={styles.modalButtonPrimary}
+                                onPress={async () => {
+                                    if (!currentFamilyId) return;
+                                    if (!newFamilyName.trim()) return;
+                                    try {
+                                        setFormLoading(true);
+                                        await familyService.updateFamilyName(currentFamilyId, newFamilyName.trim());
+                                        setEditNameModal(false);
+                                        showSuccessMessage('Success', t('family_members_updated_success', 'Family name updated'));
+                                        loadFamilyData();
+                                    } catch (e) {
+                                        showErrorMessage('Error', (e as Error).message);
+                                    } finally {
+                                        setFormLoading(false);
+                                    }
+                                }}
+                                disabled={formLoading}
+                            >
+                                {formLoading ? (
+                                    <ActivityIndicator size="small" color={Colors.backgroundWhite} />
+                                ) : (
+                                    <Text style={styles.modalButtonPrimaryText}>{t('family_members_save', 'Save')}</Text>
+                                )}
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Message Modal (Success/Error) */}
+            <Modal
+                visible={messageModal.visible}
+                transparent
+                animationType="fade"
+                statusBarTranslucent={true}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={[styles.modalIcon, {
+                            backgroundColor: messageModal.type === 'success' ? Colors.secondaryColor + '20' : Colors.red + '20'
+                        }]}>
+                            <MaterialIcons
+                                name={messageModal.type === 'success' ? 'check-circle' : 'error'}
+                                size={32}
+                                color={messageModal.type === 'success' ? Colors.secondaryColor : Colors.red}
+                            />
+                        </View>
+                        <Text style={styles.modalTitle}>{messageModal.title}</Text>
+                        <Text style={styles.modalDescription}>{messageModal.message}</Text>
+
+                        <View style={styles.modalButtons}>
+                            <Pressable
+                                style={[styles.modalButtonPrimary, {
+                                    backgroundColor: messageModal.type === 'success' ? Colors.secondaryColor : Colors.red,
+                                    width: '100%'
+                                }]}
+                                onPress={hideMessageModal}
+                            >
+                                <Text style={styles.modalButtonPrimaryText}>OK</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+        </View>
+    );
+}
+
+function FamilyMembersSkeleton() {
+    return (
+        <View style={styles.container}>
+            <CustomAppBar title="Eatsooon" />
+
+            {/* Header Skeleton */}
+            <View style={styles.header}>
+                <View style={[styles.backButton, styles.skeleton]} />
+                <View style={styles.headerContent}>
+                    <View style={[styles.skeleton, { width: 140, height: 18, marginBottom: 8, borderRadius: 4 }]} />
+                    <View style={[styles.skeleton, { width: 200, height: 14, borderRadius: 4 }]} />
+                </View>
+            </View>
+
+            <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20 }}>
+                {/* Family Header Skeleton */}
+                <View style={[styles.familyHeader, styles.skeleton, { padding: 24, alignItems: 'center' }]}>
+                    <View style={[styles.skeleton, { width: 80, height: 80, borderRadius: 40, marginBottom: 16 }]} />
+                    <View style={[styles.skeleton, { width: '60%', height: 20, marginBottom: 8, borderRadius: 4 }]} />
+                    <View style={[styles.skeleton, { width: '80%', height: 16, borderRadius: 4 }]} />
+                </View>
+
+                {/* Stats Skeleton */}
+                <View style={[styles.statsContainer, styles.skeleton, { marginTop: 24, padding: 20 }]}>
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                        <View style={[styles.skeleton, { width: 40, height: 24, marginBottom: 4, borderRadius: 4 }]} />
+                        <View style={[styles.skeleton, { width: 60, height: 12, borderRadius: 4 }]} />
+                    </View>
+                    <View style={styles.statDivider} />
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                        <View style={[styles.skeleton, { width: 40, height: 24, marginBottom: 4, borderRadius: 4 }]} />
+                        <View style={[styles.skeleton, { width: 60, height: 12, borderRadius: 4 }]} />
+                    </View>
+                </View>
+
+                {/* Members Section Skeleton */}
+                <View style={styles.section}>
+                    <View style={[styles.skeleton, { width: 150, height: 20, marginBottom: 16, borderRadius: 4 }]} />
+                    {[1, 2, 3].map((i) => (
+                        <View key={i} style={[styles.memberCard, styles.skeleton, { marginBottom: 12 }]} />
+                    ))}
+                </View>
+
+                {/* Action Buttons Skeleton */}
+                <View style={styles.actionButtons}>
+                    <View style={[styles.actionButton, styles.skeleton]} />
+                    <View style={[styles.actionButtonSecondary, styles.skeleton, { borderWidth: 0 }]} />
+                </View>
+            </ScrollView>
         </View>
     );
 }
@@ -636,6 +976,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
+    },
+    familyNameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
     },
     familyName: {
         fontFamily: 'Nunito-Bold',
@@ -842,6 +1187,24 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: Colors.secondaryColor,
     },
+    dangerButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        borderColor: Colors.red,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 12,
+        gap: 8,
+    },
+    dangerButtonText: {
+        fontFamily: 'Inter-SemiBold',
+        fontSize: 14,
+        color: Colors.red,
+    },
     // Modal Styles
     modalOverlay: {
         flex: 1,
@@ -849,6 +1212,9 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         padding: 20,
+        ...(Platform.OS === 'android' && {
+            paddingTop: StatusBar.currentHeight || 0,
+        }),
     },
     modalContent: {
         backgroundColor: Colors.backgroundWhite,
@@ -928,5 +1294,13 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter-SemiBold',
         fontSize: 16,
         color: Colors.backgroundWhite,
+    },
+    // Skeleton styles
+    skeletonText: {
+        backgroundColor: '#E5E7EB',
+        borderRadius: 4,
+    },
+    skeleton: {
+        backgroundColor: '#E5E7EB',
     },
 }); 

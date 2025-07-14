@@ -1,7 +1,10 @@
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Image,
+    KeyboardAvoidingView,
+    Platform,
     Pressable,
     SafeAreaView,
     ScrollView,
@@ -9,7 +12,6 @@ import {
     Text,
     View,
 } from 'react-native';
-import { useTranslation } from 'react-i18next';
 
 import CustomTextField from '../../components/ui/CustomTextField';
 import LoadingButton from '../../components/ui/LoadingButton';
@@ -75,7 +77,7 @@ export default function SignInScreen() {
                 type: 'success',
                 visible: true,
             });
-            // Navigate to home after success
+            // Navigate existing users to home
             router.replace('/(tabs)');
         }
     };
@@ -88,52 +90,59 @@ export default function SignInScreen() {
                 visible={toast.visible}
                 onHide={() => setToast(prev => ({ ...prev, visible: false }))}
             />
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                keyboardShouldPersistTaps="handled">
-                <Image
-                    source={require('../../assets/images/logo.png')}
-                    style={styles.logo}
-                    resizeMode="contain"
-                />
-                <Text style={[Typography.heading, { color: Colors.textPrimary }]}>{t('login_welcome_title')}</Text>
-                <Text style={[Typography.subtitle, { color: Colors.textSecondary, marginBottom: 24 }]}>
-                    {t('login_welcome_subtitle')}
-                </Text>
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            >
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}>
+                    <Image
+                        source={require('../../assets/images/logo.png')}
+                        style={styles.logo}
+                        resizeMode="contain"
+                    />
+                    <Text style={[Typography.heading, { color: Colors.textPrimary }]}>{t('login_welcome_title')}</Text>
+                    <Text style={[Typography.subtitle, { color: Colors.textSecondary, marginBottom: 24 }]}>
+                        {t('login_welcome_subtitle')}
+                    </Text>
 
-                <CustomTextField
-                    hintText={t('login_email_hint')}
-                    controller={{ value: email, onChangeText: setEmail }}
-                    keyboardType="email-address"
-                    errorText={emailError}
-                />
+                    <CustomTextField
+                        hintText={t('login_email_hint')}
+                        controller={{ value: email, onChangeText: setEmail }}
+                        keyboardType="email-address"
+                        errorText={emailError}
+                    />
 
-                <CustomTextField
-                    hintText={t('login_password_hint')}
-                    controller={{ value: password, onChangeText: setPassword }}
-                    isPassword={!isPasswordVisible}
-                    suffixIcon={isPasswordVisible ? 'eye-off' : 'eye'}
-                    onSuffixIconPressed={() => setIsPasswordVisible(!isPasswordVisible)}
-                    errorText={passwordError}
-                />
+                    <CustomTextField
+                        hintText={t('login_password_hint')}
+                        controller={{ value: password, onChangeText: setPassword }}
+                        isPassword={!isPasswordVisible}
+                        suffixIcon={isPasswordVisible ? 'eye-off' : 'eye'}
+                        onSuffixIconPressed={() => setIsPasswordVisible(!isPasswordVisible)}
+                        errorText={passwordError}
+                    />
 
-                <Link href="/(auth)/forgot-password" asChild>
-                    <Pressable>
-                        <Text style={styles.forgotPassword}>{t('login_forget_password')}</Text>
-                    </Pressable>
-                </Link>
-
-                <LoadingButton title={t('login_continue')} onPress={handleSignIn} loading={isLoading} />
-
-                <View style={styles.footer}>
-                    <Text style={styles.footerText}>{t('login_no_account')}</Text>
-                    <Link href="/(auth)/sign-up" asChild>
+                    <Link href="/(auth)/forgot-password" asChild>
                         <Pressable>
-                            <Text style={styles.footerLink}>{t('login_signup')}</Text>
+                            <Text style={styles.forgotPassword}>{t('login_forget_password')}</Text>
                         </Pressable>
                     </Link>
-                </View>
-            </ScrollView>
+
+                    <LoadingButton title={t('login_continue')} onPress={handleSignIn} loading={isLoading} />
+
+                    <View style={styles.footer}>
+                        <Text style={styles.footerText}>{t('login_no_account')}</Text>
+                        <Link href="/(auth)/sign-up" asChild>
+                            <Pressable>
+                                <Text style={styles.footerLink}>{t('login_signup')}</Text>
+                            </Pressable>
+                        </Link>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }

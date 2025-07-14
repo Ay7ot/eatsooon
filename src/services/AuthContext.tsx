@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import {
     createUserWithEmailAndPassword,
     signOut as firebaseSignOut,
@@ -7,8 +8,9 @@ import {
     updateProfile,
     User,
 } from 'firebase/auth';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { auth } from './firebase';
+import { auth, db } from './firebase';
 
 interface AuthContextType {
     user: User | null;
@@ -56,7 +58,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
             console.log('AuthContext - attempting sign in for:', email);
             await signInWithEmailAndPassword(auth, email, password);
-            console.log('AuthContext - sign in successful');
+            console.log('AuthContext - sign in successful (no onboarding for existing users)');
             return true;
         } catch (error) {
             console.error("Sign in error", error);
@@ -70,6 +72,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             await updateProfile(userCredential.user, {
                 displayName: name,
             });
+
+            // Create user document in Firestore
+            console.log('AuthContext - Creating user document in Firestore');
+            await setDoc(doc(db, 'users', userCredential.user.uid), {
+                uid: userCredential.user.uid,
+                email: email,
+                displayName: name,
+                createdAt: serverTimestamp(),
+                familyIds: [],
+                currentFamilyId: null,
+            });
+
+            console.log('AuthContext - User document created in Firestore successfully');
             return true;
         } catch (error) {
             console.error("Sign up error", error);
@@ -107,6 +122,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsLoading(true);
         try {
             await firebaseSignOut(auth);
+            // Redirect to sign-in screen after successful sign out
+            router.replace('/(auth)/sign-in');
         } catch (error) {
             console.error("Sign out error", error);
         } finally {

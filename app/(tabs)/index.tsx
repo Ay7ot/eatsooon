@@ -2,75 +2,88 @@ import CustomAppBar from '@/components/ui/CustomAppBar';
 import FamilySwitcher from '@/components/ui/FamilySwitcher';
 import { Colors } from '@/constants/Colors';
 import RecentActivity from '@/src/components/RecentActivity';
-import { FoodItem } from '@/src/models/FoodItem';
+import { useAppInventory } from '@/src/hooks/useAppInventory';
+import { FamilyMember } from '@/src/models/FamilyModel';
 import { useAuth } from '@/src/services/AuthContext';
-import { FamilyMember, familyService } from '@/src/services/FamilyService';
-import { inventoryService } from '@/src/services/InventoryService';
+import { familyService } from '@/src/services/FamilyService';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+type InventoryScope = 'user' | 'family';
+
 export default function HomeScreen() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
   const { t } = useTranslation();
-
-  const handleSignOut = async () => {
-    console.log('HomeScreen - signing out');
-    await signOut();
-  };
-
-  const handleSettingsPress = () => {
-    router.push('/profile');
-  };
-
-  const [items, setItems] = useState<FoodItem[] | null>(null);
+  const [inventoryScope, setInventoryScope] = useState<InventoryScope>('family');
+  const { stats, isLoading: isInventoryLoading } = useAppInventory(inventoryScope);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[] | null>(null);
+  const [currentFamilyId, setCurrentFamilyId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    const unsubItems = inventoryService.listenFoodItems((list) => {
-      setItems(list);
-    });
-    (async () => {
-      const familyId = await familyService.getCurrentFamilyId();
-      if (familyId) {
-        const unsubFam = familyService.listenFamilyMembers(familyId, (members) => {
-          setFamilyMembers(members);
-        });
-        return () => unsubFam();
-      } else {
-        // Mark as loaded with no family connected
-        setFamilyMembers([]);
+
+    let unsubMembers: (() => void) | null = null;
+
+    const unsubFamilyId = familyService.listenToCurrentFamilyId((familyId) => {
+      setCurrentFamilyId(familyId);
+
+      // Clean up previous family members listener if it exists
+      if (unsubMembers) {
+        unsubMembers();
+        unsubMembers = null;
       }
-    })();
-    return () => unsubItems();
+
+      if (!familyId) {
+        // If user leaves all families, default back to their personal view
+        setInventoryScope('user');
+        setFamilyMembers([]);
+      } else {
+        // Set up new family members listener
+        unsubMembers = familyService.listenToFamilyMembers(familyId, setFamilyMembers);
+      }
+    });
+
+    return () => {
+      unsubFamilyId();
+      if (unsubMembers) {
+        unsubMembers();
+      }
+    };
   }, [user]);
 
-  const stats = items ? calculateStatistics(items) : { expiring: 0, total: 0 };
-
-  function calculateStatistics(list: FoodItem[]) {
-    const today = new Date();
-    const dateOnly = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    const todayOnly = dateOnly(today);
-    let expiring = 0;
-    for (const item of list) {
-      const days = (dateOnly(item.expirationDate).getTime() - todayOnly.getTime()) / 86400000;
-      if (days > 0 && days <= 3) expiring++;
-    }
-    return { expiring, total: list.length };
-  }
 
   return (
     <View style={styles.container}>
-      <CustomAppBar title="Eatsooon" onSettingsPress={handleSettingsPress} />
+      <CustomAppBar title="Eatsooon" onSettingsPress={() => router.push('/(tabs)/profile')} />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Family Switcher moved into family section */}
-        {/* Statistics Cards */}
-        <View style={[styles.section, { marginTop: 24 }]}>
-          {items === null ? (
+        <View style={styles.section}>
+          {/* Pantry Scope Switcher */}
+          <View style={styles.scopeSwitcherContainer}>
+            <Pressable
+              style={[styles.scopeButton, inventoryScope === 'user' && styles.scopeButtonActive]}
+              onPress={() => setInventoryScope('user')}
+            >
+              <Text style={[styles.scopeButtonText, inventoryScope === 'user' && styles.scopeButtonTextActive]}>
+                {t('home_my_pantry', 'My Pantry')}
+              </Text>
+            </Pressable>
+            {currentFamilyId && (
+              <Pressable
+                style={[styles.scopeButton, inventoryScope === 'family' && styles.scopeButtonActive]}
+                onPress={() => setInventoryScope('family')}
+              >
+                <Text style={[styles.scopeButtonText, inventoryScope === 'family' && styles.scopeButtonTextActive]}>
+                  {t('home_family_pantry', 'Family Pantry')}
+                </Text>
+              </Pressable>
+            )}
+          </View>
+
+          {isInventoryLoading ? (
             <HomeStatsSkeleton />
           ) : (
             <View style={styles.statsContainer}>
@@ -83,7 +96,7 @@ export default function HomeScreen() {
                     </View>
                   </View>
                   <View style={styles.statValueContainer}>
-                    <Text style={[styles.statValue, { color: Colors.red }]}>{stats.expiring}</Text>
+                    <Text style={[styles.statValue, { color: Colors.red }]}>{stats.expiringSoon}</Text>
                   </View>
                   <View style={[styles.progressBar, { backgroundColor: Colors.red + '33' }]}>
                     <View style={[styles.progressFill, { backgroundColor: Colors.red, width: '30%' }]} />
@@ -115,11 +128,11 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('home_quick_actions')}</Text>
           <View style={styles.quickActionsContainer}>
-            <Pressable style={styles.primaryAction} onPress={() => router.push('/scan')}>
+            <Pressable style={styles.primaryAction} onPress={() => router.push('/(tabs)/scan')}>
               <MaterialIcons name="qr-code-scanner" size={20} color={Colors.backgroundWhite} />
               <Text style={styles.primaryActionText}>{t('home_scan_product')}</Text>
             </Pressable>
-            <Pressable style={styles.secondaryAction} onPress={() => router.push('/recipes')}>
+            <Pressable style={styles.secondaryAction} onPress={() => router.push('/(tabs)/recipes')}>
               <MaterialIcons name="menu-book" size={20} color={Colors.textSecondary} />
               <Text style={styles.secondaryActionText}>{t('home_recipe_suggestions')}</Text>
             </Pressable>
@@ -134,7 +147,14 @@ export default function HomeScreen() {
         {/* Family Members */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('family_members_family_members')}</Text>
-          <FamilySwitcher />
+          <View style={styles.familySwitcherRow}>
+            <FamilySwitcher />
+            <Pressable
+              onPress={() => router.push('/family-members')}
+              style={styles.manageButton}>
+              <Text style={styles.manageButtonText}>{t('family_manage', 'Manage')}</Text>
+            </Pressable>
+          </View>
           <View style={{ height: 16 }} />
           <View style={styles.familyContainer}>
             {familyMembers === null ? (
@@ -144,14 +164,14 @@ export default function HomeScreen() {
                 </View>
                 <Text style={styles.familyPlaceholderTitle}>{t('home_no_family_connected')}</Text>
                 <Text style={styles.familyPlaceholderSubtitle}>{t('home_family_subtitle')}</Text>
-                <Pressable style={styles.familyButton}>
+                <Pressable style={styles.familyButton} onPress={() => router.push('/family-members')}>
                   <Text style={styles.familyButtonText}>{t('home_get_started')}</Text>
                 </Pressable>
               </View>
             ) : (
               <View style={styles.familyGrid}>
-                {familyMembers.map((member, index) => (
-                  <View key={index} style={styles.familyMemberCard}>
+                {familyMembers.map((member) => (
+                  <View key={member.userId} style={styles.familyMemberCard}>
                     <View
                       style={[
                         styles.familyMemberAvatar,
@@ -160,13 +180,9 @@ export default function HomeScreen() {
                             member.role === 'admin' ? Colors.red : Colors.secondaryColor,
                         },
                       ]}>
-                      {member.profileImage ? (
-                        <Image source={{ uri: member.profileImage }} style={styles.familyMemberAvatarImage} />
-                      ) : (
-                        <Text style={styles.familyMemberAvatarText}>
-                          {member.displayName?.[0]?.toUpperCase() || 'U'}
-                        </Text>
-                      )}
+                      <Text style={styles.familyMemberAvatarText}>
+                        {member.displayName?.[0]?.toUpperCase() || 'U'}
+                      </Text>
                       {member.role === 'admin' && (
                         <View style={styles.adminBadge}>
                           <MaterialIcons name="star" size={10} color="#FFFFFF" />
@@ -189,7 +205,7 @@ export default function HomeScreen() {
                           styles.rolePillText,
                           { color: member.role === 'admin' ? Colors.red : Colors.secondaryColor },
                         ]}>
-                        {member.role === 'admin' ? t('family_role_admin') : t('family_role_member')}
+                        {member.role === 'admin' ? t('family_role_admin', 'Admin') : t('family_role_member', 'Member')}
                       </Text>
                     </View>
                   </View>
@@ -227,6 +243,46 @@ const styles = StyleSheet.create({
   section: {
     paddingHorizontal: 20,
     marginBottom: 32,
+  },
+  pantryTitle: {
+    fontSize: 18,
+    fontFamily: 'Nunito-SemiBold',
+    color: Colors.textPrimary,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  scopeSwitcherContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    backgroundColor: Colors.backgroundColor,
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: Colors.borderColor
+  },
+  scopeButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  scopeButtonActive: {
+    backgroundColor: Colors.secondaryColor,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  scopeButtonText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  scopeButtonTextActive: {
+    fontFamily: 'Inter-SemiBold',
+    color: Colors.backgroundWhite,
   },
   sectionTitle: {
     fontSize: 18,
@@ -502,6 +558,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  familyHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  familySwitcherRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  manageButton: {
+    backgroundColor: Colors.secondaryColor,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginLeft: 12,
+    minHeight: 40,
+    justifyContent: 'center',
+  },
+  manageButtonText: {
+    color: Colors.backgroundWhite,
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
   },
 });
 

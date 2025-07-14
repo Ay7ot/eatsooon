@@ -1,7 +1,5 @@
-import CustomAppBar from '@/components/ui/CustomAppBar';
 import { Colors } from '@/constants/Colors';
 import { Recipe, getCategoryColor, getEmojiForIngredient } from '@/src/models/RecipeModel';
-import { activityService } from '@/src/services/ActivityService';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -22,14 +20,12 @@ export default function RecipeDetailScreen() {
     const router = useRouter();
     const [recipe, setRecipe] = useState<Recipe | null>(null);
     const [selectedServings, setSelectedServings] = useState(4);
-    const [isFavorite, setIsFavorite] = useState(false);
 
     useEffect(() => {
         if (recipeData && typeof recipeData === 'string') {
             try {
                 const parsedRecipe = JSON.parse(recipeData) as Recipe;
                 setRecipe(parsedRecipe);
-                setIsFavorite(parsedRecipe.isFavorite);
 
                 // Parse servings from string like "4 servings"
                 const servingsMatch = parsedRecipe.servings.match(/(\d+)/);
@@ -37,8 +33,8 @@ export default function RecipeDetailScreen() {
                     setSelectedServings(parseInt(servingsMatch[1], 10));
                 }
 
-                // Log recipe viewed activity
-                activityService.logRecipeViewed(parsedRecipe.title, parsedRecipe.imageUrl);
+                // Note: Recipe viewed activity is already logged in recipes screen
+                // when user taps to view the recipe, so we don't log it again here
             } catch (error) {
                 console.error('Error parsing recipe data:', error);
                 router.back();
@@ -48,17 +44,6 @@ export default function RecipeDetailScreen() {
 
     const adjustServings = (change: number) => {
         setSelectedServings(prev => Math.max(1, Math.min(12, prev + change)));
-    };
-
-    const toggleFavorite = () => {
-        if (!recipe) return;
-
-        const newFavoriteState = !isFavorite;
-        setIsFavorite(newFavoriteState);
-
-        if (newFavoriteState) {
-            activityService.logRecipeFavorited(recipe.title, recipe.imageUrl);
-        }
     };
 
     // Helper to translate recipe category names
@@ -84,7 +69,6 @@ export default function RecipeDetailScreen() {
     if (!recipe) {
         return (
             <View style={styles.container}>
-                <CustomAppBar title="Eatsooon" />
                 <View style={styles.centerContent}>
                     <Text style={styles.errorText}>{t('recipe_detail_not_found')}</Text>
                     <Pressable style={styles.backButton} onPress={() => router.back()}>
@@ -99,8 +83,6 @@ export default function RecipeDetailScreen() {
 
     return (
         <View style={styles.container}>
-            <CustomAppBar title="Eatsooon" />
-
             {/* Sub-header */}
             <View style={styles.subHeader}>
                 <Pressable style={styles.backIconContainer} onPress={() => router.back()}>
@@ -150,15 +132,7 @@ export default function RecipeDetailScreen() {
 
                             <View style={styles.metaItem}>
                                 <MaterialIcons name="people" size={28} color="#2196F3" />
-                                <View style={styles.servingsChanger}>
-                                    <Pressable onPress={() => adjustServings(-1)}>
-                                        <MaterialIcons name="remove-circle-outline" size={20} color="#6B7280" />
-                                    </Pressable>
-                                    <Text style={styles.metaValue}>{selectedServings}</Text>
-                                    <Pressable onPress={() => adjustServings(1)}>
-                                        <MaterialIcons name="add-circle-outline" size={20} color="#6B7280" />
-                                    </Pressable>
-                                </View>
+                                <Text style={styles.metaValue}>{selectedServings}</Text>
                                 <Text style={styles.metaLabel}>{t('recipe_detail_servings')}</Text>
                             </View>
                         </View>
@@ -206,17 +180,7 @@ export default function RecipeDetailScreen() {
                 </View>
             </ScrollView>
 
-            {/* Floating Action Button */}
-            <Pressable
-                style={[styles.fab, { backgroundColor: isFavorite ? '#EF4444' : categoryColor }]}
-                onPress={toggleFavorite}
-            >
-                <MaterialIcons
-                    name={isFavorite ? "favorite" : "favorite-border"}
-                    size={24}
-                    color="white"
-                />
-            </Pressable>
+            {/* Removed floating favorite button */}
         </View>
     );
 }

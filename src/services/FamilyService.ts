@@ -83,7 +83,6 @@ class FamilyService {
                 userId: this.currentUserId,
                 displayName: user.displayName || 'User',
                 email: user.email || '',
-                profileImage: user.photoURL || undefined,
                 role: FamilyMemberRole.ADMIN,
                 status: FamilyMemberStatus.ACTIVE,
             });
@@ -263,7 +262,6 @@ class FamilyService {
                 userId: this.currentUserId,
                 displayName: user.displayName || 'User',
                 email: user.email || '',
-                profileImage: user.photoURL || undefined,
                 role: FamilyMemberRole.MEMBER,
                 status: FamilyMemberStatus.ACTIVE,
             });
@@ -373,7 +371,6 @@ class FamilyService {
         userId,
         displayName,
         email,
-        profileImage,
         role,
         status,
     }: {
@@ -381,16 +378,14 @@ class FamilyService {
         userId: string;
         displayName: string;
         email: string;
-        profileImage?: string;
         role: FamilyMemberRole;
         status: FamilyMemberStatus;
     }): Promise<void> {
-        const member: FamilyMember = {
+        const member: Omit<FamilyMember, 'profileImage'> = {
             userId,
             familyId,
             displayName,
             email,
-            profileImage,
             role,
             status,
             joinedAt: new Date(),
@@ -400,7 +395,7 @@ class FamilyService {
 
         await setDoc(doc(db, 'familyMembers', familyId), {
             members: {
-                [userId]: familyMemberToFirestore(member)
+                [userId]: familyMemberToFirestore(member as FamilyMember)
             }
         }, { merge: true });
     }
@@ -436,6 +431,27 @@ class FamilyService {
             console.warn('FamilyService getCurrentFamilyId error', error);
             return null;
         }
+    }
+
+    // Listen in real-time to changes of `currentFamilyId` on the user document.
+    // Returns an unsubscribe function to stop listening.
+    listenToCurrentFamilyId(callback: (familyId: string | null) => void): () => void {
+        if (!this.currentUserId) {
+            callback(null);
+            return () => { };
+        }
+        const userDocRef = doc(db, 'users', this.currentUserId);
+        return onSnapshot(
+            userDocRef,
+            (snap) => {
+                const data = snap.data() as any | undefined;
+                callback(data?.currentFamilyId ?? null);
+            },
+            (error) => {
+                console.error('FamilyService listenToCurrentFamilyId error', error);
+                callback(null);
+            },
+        );
     }
 
     // Fetch list of families (id & name) the current user belongs to
@@ -477,6 +493,89 @@ class FamilyService {
             console.warn('FamilyService switchFamily error', error);
             throw new Error(`Failed to switch family: ${error}`);
         }
+    }
+
+    /**
+     * Update family name (admin only). Does NOT change other fields.
+     */
+    async updateFamilyName(familyId: string, newName: string): Promise<void> {
+        try {
+            if (!this.currentUserId) throw new Error('Not signed in');
+            if (!newName.trim()) throw new Error('Name cannot be empty');
+
+            // Verify current user is admin of this family
+            const members = await this.getFamilyMembers(familyId);
+            const me = members.find((m) => m.userId === this.currentUserId);
+            if (!me || me.role !== FamilyMemberRole.ADMIN) {
+                throw new Error('Only admins can rename the family');
+            }
+
+            await updateDoc(doc(db, 'families', familyId), {
+                name: newName.trim(),
+                updatedAt: serverTimestamp(),
+            });
+        } catch (error) {
+            console.error('updateFamilyName error', error);
+            throw error;
+        }
+    }
+
+    async deleteFamily(familyId: string): Promise<void> {
+        if (!this.currentUserId) {
+            throw new Error("No user is currently signed in.");
+        }
+
+        const familyDoc = await this.getFamily(familyId);
+        if (!familyDoc) {
+            throw new Error("Family not found.");
+        }
+
+        if (familyDoc.adminUserId !== this.currentUserId) {
+            throw new Error("Only the family admin can delete the family.");
+        }
+
+        const batch = writeBatch(db);
+
+        // 1. Get all members to update their user documents
+        const members = await this.getFamilyMembers(familyId);
+        for (const member of members) {
+            const userRef = doc(db, 'users', member.userId);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+                const userData = userSnap.data();
+                const updateData: any = {
+                    familyIds: arrayRemove(familyId)
+                };
+                if (userData.currentFamilyId === familyId) {
+                    updateData.currentFamilyId = null;
+                }
+                batch.update(userRef, updateData);
+            }
+        }
+
+        // 2. Delete all items in the family pantry subcollection
+        const pantrySnapshot = await getDocs(collection(db, 'families', familyId, 'pantry'));
+        pantrySnapshot.docs.forEach(pantryDoc => {
+            batch.delete(doc(db, 'families', familyId, 'pantry', pantryDoc.id));
+        });
+
+
+        // 3. Delete all pending invitations for the family
+        const invitationsQuery = query(collection(db, 'familyInvitations'), where('familyId', '==', familyId));
+        const invitationsSnapshot = await getDocs(invitationsQuery);
+        invitationsSnapshot.forEach(invitationDoc => {
+            batch.delete(doc(db, 'familyInvitations', invitationDoc.id));
+        });
+
+        // 4. Delete the familyMembers document
+        batch.delete(doc(db, 'familyMembers', familyId));
+
+
+        // 5. Delete the main family document
+        batch.delete(doc(db, 'families', familyId));
+
+        await batch.commit();
+        console.log(`Family ${familyId} and all associated data deleted successfully.`);
     }
 
     // Get pending invitations for a family

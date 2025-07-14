@@ -134,45 +134,14 @@ function ActivityItem({ activity }: { activity: ActivityModel }) {
 }
 
 function localizeActivity(activity: ActivityModel, t: any) {
-    switch (activity.type) {
-        case 'itemAdded':
-            return {
-                title: t('act_item_added_title', { item: activity.metadata?.itemName ?? '' }),
-                subtitle: t('act_item_added_sub'),
-            };
-        case 'itemDeleted':
-            return {
-                title: t('act_item_deleted_title', { item: activity.metadata?.itemName ?? '' }),
-                subtitle: t('act_item_deleted_sub'),
-            };
-        case 'itemUpdated':
-            return {
-                title: t('act_item_updated_title', { item: activity.metadata?.itemName ?? '' }),
-                subtitle: t('act_item_updated_sub'),
-            };
-        case 'recipeViewed':
-            return {
-                title: t('act_recipe_viewed_title', { recipe: activity.metadata?.recipeName ?? '' }),
-                subtitle: t('act_recipe_viewed_sub'),
-            };
-        case 'recipeFavorited':
-            return {
-                title: t('act_recipe_favorited_title', { recipe: activity.metadata?.recipeName ?? '' }),
-                subtitle: t('act_recipe_favorited_sub'),
-            };
-        case 'scanPerformed':
-            return {
-                title: t('act_scan_performed_title'),
-                subtitle: activity.metadata?.detectedItem ? `${activity.metadata.detectedItem}` : t('act_scan_performed_sub'),
-            };
-        case 'inventoryCleared':
-            return {
-                title: t('act_inventory_cleared_title', { count: activity.metadata?.itemCount ?? 0 }),
-                subtitle: t('act_inventory_cleared_sub'),
-            };
-        default:
-            return { title: activity.title, subtitle: activity.subtitle };
-    }
+    const { title, subtitle, metadata } = activity;
+
+    // The 'title' and 'subtitle' fields now hold the translation keys.
+    // The dynamic values are in the metadata.
+    const localizedTitle = t(title, { ...metadata, defaultValue: title });
+    const localizedSubtitle = subtitle ? t(subtitle, { ...metadata, defaultValue: subtitle }) : '';
+
+    return { title: localizedTitle, subtitle: localizedSubtitle };
 }
 
 const styles = StyleSheet.create({

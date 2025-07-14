@@ -1,12 +1,16 @@
 import CustomAppBar from '@/components/ui/CustomAppBar';
 import { Colors } from '@/constants/Colors';
+import { useAppInventory } from '@/src/hooks/useAppInventory';
 import { daysUntilExpiration, FoodItem, statusColor } from '@/src/models/FoodItem';
-import { inventoryService } from '@/src/services/InventoryService';
+import { useAuth } from '@/src/services/AuthContext';
+import { familyService } from '@/src/services/FamilyService';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { router } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     FlatList,
+    Image,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -15,6 +19,7 @@ import {
     View
 } from 'react-native';
 
+type InventoryScope = 'user' | 'family';
 type FilterKey = 'all' | 'soon' | 'today' | 'expired';
 
 // Map FilterKey -> translation key
@@ -27,20 +32,25 @@ const FILTER_LABEL_KEYS: Record<FilterKey, string> = {
 
 export default function InventoryScreen() {
     const { t } = useTranslation();
-    const [items, setItems] = useState<FoodItem[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const { user } = useAuth();
+    const [inventoryScope, setInventoryScope] = useState<InventoryScope>('family');
+    const { items, stats, isLoading } = useAppInventory(inventoryScope);
+    const [currentFamilyId, setCurrentFamilyId] = useState<string | null>(null);
 
     // UI state
     const [selectedFilter, setSelectedFilter] = useState<FilterKey>('all');
     const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
-        const unsubscribe = inventoryService.listenFoodItems((list) => {
-            setItems(list);
-            setIsLoading(false);
+        if (!user) return;
+        const unsubFamilyId = familyService.listenToCurrentFamilyId((familyId) => {
+            setCurrentFamilyId(familyId);
+            if (!familyId) {
+                setInventoryScope('user');
+            }
         });
-        return unsubscribe;
-    }, []);
+        return () => unsubFamilyId();
+    }, [user]);
 
     const filteredItems = useMemo(() => {
         let list = [...items];
@@ -54,8 +64,6 @@ export default function InventoryScreen() {
         }
 
         // Status filter
-        const today = new Date();
-        const dateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         switch (selectedFilter) {
             case 'soon':
                 list = list.filter((it) => {
@@ -80,20 +88,6 @@ export default function InventoryScreen() {
         return list;
     }, [items, selectedFilter, searchQuery]);
 
-    const stats = useMemo(() => {
-        let expiring = 0;
-        let todayCnt = 0;
-        items.forEach((it) => {
-            const d = daysUntilExpiration(it);
-            if (d === 0) todayCnt += 1;
-            else if (d > 0 && d <= 3) expiring += 1;
-        });
-        return {
-            expiring,
-            today: todayCnt,
-            total: items.length,
-        };
-    }, [items]);
 
     // --- RENDERERS --- //
 
@@ -107,6 +101,30 @@ export default function InventoryScreen() {
                 <InventorySkeleton />
             ) : (
                 <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+                    {/* Pantry Scope Switcher */}
+                    <View style={[styles.section, { marginTop: 24, marginBottom: 0 }]}>
+                        <View style={styles.scopeSwitcherContainer}>
+                            <Pressable
+                                style={[styles.scopeButton, inventoryScope === 'user' && styles.scopeButtonActive]}
+                                onPress={() => setInventoryScope('user')}
+                            >
+                                <Text style={[styles.scopeButtonText, inventoryScope === 'user' && styles.scopeButtonTextActive]}>
+                                    {t('home_my_pantry', 'My Pantry')}
+                                </Text>
+                            </Pressable>
+                            {currentFamilyId && (
+                                <Pressable
+                                    style={[styles.scopeButton, inventoryScope === 'family' && styles.scopeButtonActive]}
+                                    onPress={() => setInventoryScope('family')}
+                                >
+                                    <Text style={[styles.scopeButtonText, inventoryScope === 'family' && styles.scopeButtonTextActive]}>
+                                        {t('home_family_pantry', 'Family Pantry')}
+                                    </Text>
+                                </Pressable>
+                            )}
+                        </View>
+                    </View>
+
                     {/* Statistics */}
                     <View style={[styles.section, { marginTop: 24 }]}>
                         <StatisticsCards stats={stats} />
@@ -147,20 +165,20 @@ export default function InventoryScreen() {
 
 // -------------------- SUB COMPONENTS -------------------- //
 
-function StatisticsCards({ stats }: { stats: { expiring: number; today: number; total: number } }) {
+function StatisticsCards({ stats }: { stats: { expiringSoon: number; expiringToday: number; total: number, expired: number } }) {
     const { t } = useTranslation();
     return (
         <View style={styles.statsContainer}>
             <StatCard
                 label={t('inventory_expiring')}
-                value={stats.expiring}
+                value={stats.expiringSoon}
                 icon="warning"
                 color={Colors.red}
                 bgColor="#FEE2E2"
             />
             <StatCard
                 label={t('inventory_today')}
-                value={stats.today}
+                value={stats.expiringToday}
                 icon="schedule"
                 color="#F59E0B"
                 bgColor="#FEF3C7"
@@ -261,38 +279,60 @@ function InventoryItemCard({ item }: { item: FoodItem }) {
 
     const emoji = getEmojiForCategory(item.category);
 
+    const handleItemPress = () => {
+        router.push({
+            pathname: '/inventory-item-detail',
+            params: {
+                itemId: item.id,
+                itemName: item.name,
+                itemImageUrl: item.imageUrl || '',
+                itemCategory: item.category,
+                itemQuantity: item.quantity?.toString() || '1',
+                itemUnit: item.unit || '',
+                itemExpirationDate: item.expirationDate.toISOString(),
+            },
+        });
+    };
+
     return (
-        <View style={[styles.itemCard, { borderLeftColor: statusColor(item) }]}>
-            {/* Image / Emoji */}
-            <View style={styles.itemImageContainer}>
-                {item.imageUrl ? (
-                    <View style={styles.itemImageWrapper}>
-                        {/* eslint-disable-next-line react-native/no-inline-styles */}
-                        <Text style={{ fontSize: 24 }}>📷</Text>
-                    </View>
-                ) : (
-                    <Text style={{ fontSize: 24 }}>{emoji}</Text>
-                )}
-            </View>
+        <Pressable onPress={handleItemPress}>
+            <View style={[styles.itemCard, { borderLeftColor: statusColor(item) }]}>
+                {/* Image / Emoji */}
+                <View style={styles.itemImageContainer}>
+                    {item.imageUrl && item.imageUrl.trim() !== '' ? (
+                        <Image
+                            source={{ uri: item.imageUrl }}
+                            style={styles.itemImage}
+                            resizeMode="cover"
+                            onError={() => {
+                                // Fallback to emoji if image fails to load
+                                console.log('Failed to load image:', item.imageUrl);
+                            }}
+                        />
+                    ) : (
+                        <Text style={{ fontSize: 24 }}>{emoji}</Text>
+                    )}
+                </View>
 
-            {/* Details */}
-            <View style={{ flex: 1, marginHorizontal: 12 }}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemSub}>{`${item.quantity ?? 1} ${translateOption(item.unit ?? '', t)} • ${translateOption(item.category, t)}`}</Text>
-                <Text style={[styles.itemSub, { color: statusColor(item) }]}>
-                    {days < 0
-                        ? t('inventory_expired_ago', { count: Math.abs(days) })
-                        : days === 0
-                            ? t('inventory_expires_today')
-                            : t('inventory_expires_in', { count: days })}
-                </Text>
-            </View>
+                {/* Details */}
+                <View style={{ flex: 1, marginHorizontal: 12 }}>
+                    <Text style={styles.itemName}>{item.name}</Text>
+                    <Text style={styles.itemSub}>{`${item.quantity ?? 1} ${translateOption(item.unit ?? '', 'unit', t)} • ${translateOption(item.category, 'cat', t)}`}</Text>
+                    <Text style={[styles.itemSub, { color: statusColor(item) }]}>
+                        {days < 0
+                            ? t('inventory_expired_ago', { count: Math.abs(days) })
+                            : days === 0
+                                ? t('inventory_expires_today')
+                                : t('inventory_expires_in', { count: days })}
+                    </Text>
+                </View>
 
-            {/* Badge */}
-            <View style={[styles.badgeContainer, { backgroundColor: badgeBg }]}>
-                <Text style={[styles.badgeText, { color: badgeText }]}>{badgeLabel}</Text>
+                {/* Badge */}
+                <View style={[styles.badgeContainer, { backgroundColor: badgeBg }]}>
+                    <Text style={[styles.badgeText, { color: badgeText }]}>{badgeLabel}</Text>
+                </View>
             </View>
-        </View>
+        </Pressable>
     );
 }
 
@@ -326,25 +366,90 @@ function InventorySkeleton() {
 
 // -------------------- UTILS -------------------- //
 
-function translateOption(raw: string, t: any) {
-    const slug = raw.toLowerCase().replace(/[^a-z]/g, '');
-    const prefixes = ['cat_', 'unit_', 'store_'];
-    for (const p of prefixes) {
-        const key = p + slug;
-        const translated = t(key);
-        if (translated !== key) return translated;
+function translateOption(raw: string, type: 'cat' | 'unit' | 'store', t: any) {
+    // Create a mapping for each type
+    const categoryMap: { [key: string]: string } = {
+        'bakery': 'cat_bakery',
+        'beverages': 'cat_beverages',
+        'dairy': 'cat_dairy',
+        'frozen': 'cat_frozen',
+        'fruits': 'cat_fruits',
+        'meat': 'cat_meat',
+        'pantry': 'cat_pantry',
+        'snacks': 'cat_snacks',
+        'vegetables': 'cat_vegetables',
+        'other': 'cat_other',
+    };
+
+    const unitMap: { [key: string]: string } = {
+        'liters': 'unit_liters',
+        'ml': 'unit_ml',
+        'kg': 'unit_kg',
+        'grams': 'unit_grams',
+        'pieces': 'unit_pieces',
+        'pcs': 'unit_pcs',
+        'pack(s)': 'unit_packs',
+        'packs': 'unit_packs',
+        'bottle(s)': 'unit_bottles',
+        'bottles': 'unit_bottles',
+        'can(s)': 'unit_cans',
+        'cans': 'unit_cans',
+        'lbs': 'unit_lbs',
+        'oz': 'unit_oz',
+    };
+
+    const storeMap: { [key: string]: string } = {
+        'refrigerator': 'store_refrigerator',
+        'freezer': 'store_freezer',
+        'pantry': 'store_pantry',
+        'counter': 'store_counter',
+    };
+
+    const slug = raw.toLowerCase().replace(/[^a-z()]/g, '');
+    let key = '';
+
+    switch (type) {
+        case 'cat':
+            key = categoryMap[slug] || `cat_${slug}`;
+            break;
+        case 'unit':
+            key = unitMap[slug] || `unit_${slug}`;
+            break;
+        case 'store':
+            key = storeMap[slug] || `store_${slug}`;
+            break;
     }
-    return raw;
+
+    const translated = t(key);
+    return translated !== key ? translated : raw;
 }
 
 function getEmojiForCategory(category: string) {
     const c = category.toLowerCase();
+
+    // Exact category matches first
+    if (c === 'bakery') return '🍞';
+    if (c === 'beverages') return '🥤';
+    if (c === 'dairy') return '🥛';
+    if (c === 'frozen') return '🧊';
+    if (c === 'fruits') return '🍎';
+    if (c === 'meat') return '🍗';
+    if (c === 'pantry') return '🥫';
+    if (c === 'snacks') return '🍪';
+    if (c === 'vegetables') return '🥬';
+    if (c === 'other') return '📦';
+
+    // Fallback partial matches for backwards compatibility
     if (c.includes('fruit')) return '🍎';
     if (c.includes('vegetable')) return '🥬';
     if (c.includes('meat')) return '🍗';
     if (c.includes('dairy') || c.includes('milk')) return '🥛';
     if (c.includes('snack')) return '🍪';
     if (c.includes('drink') || c.includes('beverage')) return '🥤';
+    if (c.includes('bakery') || c.includes('bread')) return '🍞';
+    if (c.includes('frozen')) return '🧊';
+    if (c.includes('pantry')) return '🥫';
+
     return '🥫';
 }
 
@@ -358,6 +463,38 @@ const styles = StyleSheet.create({
     section: {
         paddingHorizontal: 20,
         marginBottom: 24,
+    },
+    scopeSwitcherContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        backgroundColor: Colors.backgroundColor,
+        borderRadius: 12,
+        padding: 4,
+        borderWidth: 1,
+        borderColor: Colors.borderColor
+    },
+    scopeButton: {
+        flex: 1,
+        paddingVertical: 10,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    scopeButtonActive: {
+        backgroundColor: Colors.secondaryColor,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    scopeButtonText: {
+        fontFamily: 'Inter-Medium',
+        fontSize: 14,
+        color: Colors.textSecondary,
+    },
+    scopeButtonTextActive: {
+        fontFamily: 'Inter-SemiBold',
+        color: Colors.backgroundWhite,
     },
     // Stats
     statsContainer: {
@@ -450,6 +587,12 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         borderWidth: 1,
         borderColor: Colors.borderColor,
+        overflow: 'hidden',
+    },
+    itemImage: {
+        width: 56,
+        height: 56,
+        borderRadius: 9.6,
     },
     itemImageWrapper: {
         width: 56,

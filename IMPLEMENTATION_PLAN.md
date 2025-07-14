@@ -80,5 +80,5 @@ This phase builds the main functionalities of the app.
     - Implemented real-time item display with status badges, category emojis, and expiration tracking.
     - Added skeleton loading states and responsive design matching Flutter UI.
 
-- [ ] **13. Implement Product Scanning:**
+- [x] **13. Implement Product Scanning:**
     -   Integrate `expo-barcode-scanner`
