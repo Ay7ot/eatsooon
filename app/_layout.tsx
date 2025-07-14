@@ -1,5 +1,6 @@
 import { LanguageProvider } from '@/src/localization/LanguageContext';
 import { AuthProvider } from '@/src/services/AuthContext';
+import { registerBackgroundTask, testBackgroundTask } from '@/src/services/backgroundTaskService';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -27,6 +28,15 @@ export default function RootLayout() {
   useEffect(() => {
     if (loaded) {
       SplashScreen.hideAsync();
+      registerBackgroundTask();
+
+      // Test the background task functionality (for development/testing)
+      // Remove this in production
+      // Delay longer to give user time to authenticate
+      setTimeout(() => {
+        console.log('🧪 Running notification test in 10 seconds...');
+        testBackgroundTask();
+      }, 10000); // Test after 10 seconds
     }
   }, [loaded]);
 

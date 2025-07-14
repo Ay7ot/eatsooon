@@ -424,5 +424,12 @@
   "onboarding_continue": "Continuar",
   "onboarding_get_started": "Comenzar",
   "recent_no_activity_yet": "Aún no hay actividad reciente",
-  "recent_empty_subtitle": "Comienza a escanear productos o agregar artículos para ver la actividad aquí."
+  "recent_empty_subtitle": "Comienza a escanear productos o agregar artículos para ver la actividad aquí.",
+
+  "notification_expiring_title": "Recordatorio de Eat Soon",
+  "notification_expiring_body": "Tienes {{count}} artículos que vencen pronto. ¡Revisa tu inventario!",
+  "notification_test_title": "Notificación de Prueba",
+  "notification_test_body": "Se encontraron {{count}} artículos que vencen en modo de prueba",
+  "notification_channel_name": "Artículos por Vencer",
+  "notification_channel_description": "Notificaciones para artículos que vencen pronto"
 }

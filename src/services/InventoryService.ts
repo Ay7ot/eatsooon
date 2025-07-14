@@ -1,6 +1,7 @@
-import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore';
 import { FoodItem, foodItemFromFirestore } from '../models/FoodItem';
 import { activityService } from './ActivityService';
+import { familyService } from './FamilyService';
 import { auth, db } from './firebase';
 
 class InventoryService {
@@ -136,6 +137,52 @@ class InventoryService {
 
         // Log activity
         await activityService.logItemDeleted('Item', undefined);
+    }
+
+    async getExpiringSoonItems(days: number = 3): Promise<FoodItem[]> {
+        const user = auth.currentUser;
+        if (!user) {
+            console.log('No user logged in, cannot fetch expiring items.');
+            return [];
+        }
+
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const cutoffDate = new Date(today);
+        cutoffDate.setDate(today.getDate() + days + 1);
+
+        const personalQuery = query(
+            collection(db, 'inventory', user.uid, 'items'),
+            where('expirationDate', '>=', today),
+            where('expirationDate', '<', cutoffDate)
+        );
+
+        const familyId = await familyService.getCurrentFamilyId();
+        const familyQuery = familyId ? query(
+            collection(db, 'families', familyId, 'pantry'),
+            where('expirationDate', '>=', today),
+            where('expirationDate', '<', cutoffDate)
+        ) : null;
+
+        try {
+            const [personalSnapshot, familySnapshot] = await Promise.all([
+                getDocs(personalQuery),
+                familyQuery ? getDocs(familyQuery) : Promise.resolve(null),
+            ]);
+
+            const personalItems = personalSnapshot.docs.map(foodItemFromFirestore);
+            const familyItems = familySnapshot ? familySnapshot.docs.map(foodItemFromFirestore) : [];
+
+            // Combine and remove duplicates by item ID
+            const allItems = [...personalItems, ...familyItems];
+            const uniqueItems = Array.from(new Map(allItems.map(item => [item.id, item])).values());
+
+            console.log(`Found ${uniqueItems.length} unique expiring items.`);
+            return uniqueItems;
+        } catch (error) {
+            console.error('Error fetching expiring items:', error);
+            return [];
+        }
     }
 }
 

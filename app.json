@@ -11,7 +11,13 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.eatsooon",
-      "appleTeamId": "88NCV6QJ5S"
+      "appleTeamId": "88NCV6QJ5S",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "fetch",
+          "processing"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +25,9 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "permissions": ["android.permission.CAMERA"],
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
       "package": "com.anonymous.eatsooon"
     },
     "web": {
@@ -38,7 +46,9 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      "expo-notifications",
+      "expo-background-task"
     ],
     "experiments": {
       "typedRoutes": true

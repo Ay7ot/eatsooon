@@ -258,13 +258,13 @@
   "family_members_family_members": "Family Members",
   "act_recipe_viewed_title": "Viewed {{recipe}} recipe",
   "act_recipe_viewed_sub": "Recipe details opened",
-  "act_item_added_title": "{{item}} added to pantry",
+  "act_item_added_title": "{{itemName}} added to pantry",
   "act_item_added_sub": "New item in your inventory",
-  "act_item_deleted_title": "{{item}} removed from pantry",
+  "act_item_deleted_title": "{{itemName}} removed from pantry",
   "act_item_deleted_sub": "Item deleted from inventory",
-  "act_item_updated_title": "{{item}} updated",
+  "act_item_updated_title": "{{itemName}} updated",
   "act_item_updated_sub": "Item details modified",
-  "act_recipe_favorited_title": "Favorited {{recipe}}",
+  "act_recipe_favorited_title": "Favorited {{recipeName}}",
   "act_recipe_favorited_sub": "Recipe added to favorites",
   "act_scan_performed_title": "Product scanned",
   "act_scan_performed_sub": "Barcode/text recognition performed",
@@ -436,5 +436,12 @@
   "onboarding_continue": "Continue",
 
   "recent_no_activity_yet": "No recent activity yet",
-  "recent_empty_subtitle": "Start scanning products or adding items to see activity here."
+  "recent_empty_subtitle": "Start scanning products or adding items to see activity here.",
+
+  "notification_expiring_title": "Eat Soon Reminder",
+  "notification_expiring_body": "You have {{count}} items expiring soon. Check your inventory!",
+  "notification_test_title": "Test Notification",
+  "notification_test_body": "Found {{count}} expiring items in test mode",
+  "notification_channel_name": "Expiring Items",
+  "notification_channel_description": "Notifications for items expiring soon"
 }
