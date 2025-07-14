@@ -211,44 +211,21 @@ export default function ProfileScreen() {
                     </View>
                 </View>
 
-                {/* ACTIVITY Stats Cards */}
-                <View style={styles.statsSection}>
-                    <Text style={styles.statsTitle}>{t('profile_activity_stats', 'Activity Stats')}</Text>
-                    <View style={styles.statsContainer}>
-                        <View style={styles.statCard}>
-                            <Text style={styles.statValue}>{userStats.itemsAdded}</Text>
-                            <Text style={styles.statLabel}>{t('profile_items_added')}</Text>
-                        </View>
-                        <View style={styles.statCard}>
-                            <Text style={styles.statValue}>{userStats.recipesViewed}</Text>
-                            <Text style={styles.statLabel}>{t('profile_recipes_viewed')}</Text>
-                        </View>
-                        <View style={styles.statCard}>
-                            <Text style={styles.statValue}>{userStats.daysActive}</Text>
-                            <Text style={styles.statLabel}>{t('profile_days_active')}</Text>
-                        </View>
+                {/* Stats Cards */}
+                <View style={styles.statsContainer}>
+                    <View style={styles.statCard}>
+                        <Text style={styles.statValue}>{inventoryStats.total}</Text>
+                        <Text style={styles.statLabel}>{t('profile_total_items', 'Your Items')}</Text>
+                    </View>
+                    <View style={styles.statCard}>
+                        <Text style={[styles.statValue, { color: Colors.red }]}>{inventoryStats.expired}</Text>
+                        <Text style={styles.statLabel}>{t('profile_items_expired', 'Items Expired')}</Text>
+                    </View>
+                    <View style={styles.statCard}>
+                        <Text style={[styles.statValue, { color: Colors.orange }]}>{inventoryStats.expiringSoon}</Text>
+                        <Text style={styles.statLabel}>{t('profile_expiring_soon', 'Expiring Soon')}</Text>
                     </View>
                 </View>
-
-                {/* INVENTORY Stats Cards */}
-                <View style={styles.statsSection}>
-                    <Text style={styles.statsTitle}>{t('profile_pantry_stats', 'Your Pantry Stats')}</Text>
-                    <View style={styles.statsContainer}>
-                        <View style={styles.statCard}>
-                            <Text style={styles.statValue}>{inventoryStats.total}</Text>
-                            <Text style={styles.statLabel}>{t('profile_total_items', 'Your Items')}</Text>
-                        </View>
-                        <View style={styles.statCard}>
-                            <Text style={[styles.statValue, { color: Colors.red }]}>{inventoryStats.expired}</Text>
-                            <Text style={styles.statLabel}>{t('profile_items_expired', 'Items Expired')}</Text>
-                        </View>
-                        <View style={styles.statCard}>
-                            <Text style={[styles.statValue, { color: Colors.orange }]}>{inventoryStats.expiringSoon}</Text>
-                            <Text style={styles.statLabel}>{t('profile_expiring_soon', 'Expiring Soon')}</Text>
-                        </View>
-                    </View>
-                </View>
-
 
                 {/* Quick Actions */}
                 <View style={styles.section}>
@@ -440,18 +417,10 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: Colors.textSecondary,
     },
-    statsSection: {
-        paddingHorizontal: 20,
-        marginBottom: 32,
-    },
-    statsTitle: {
-        fontFamily: 'Nunito-SemiBold',
-        fontSize: 18,
-        color: Colors.textPrimary,
-        marginBottom: 16,
-    },
     statsContainer: {
         flexDirection: 'row',
+        paddingHorizontal: 20,
+        marginBottom: 32,
         gap: 16,
     },
     statCard: {
@@ -673,5 +642,22 @@ const styles = StyleSheet.create({
         backgroundColor: '#E5E7EB',
         borderRadius: 4,
         alignSelf: 'center',
+    },
+    statsGrid: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    familySwitcherContainer: {
+        height: 56,
+        borderRadius: 12,
+    },
+    settingItem: {
+        height: 56,
+        borderRadius: 12,
+    },
+    activityCard: {
+        height: 80,
+        borderRadius: 12,
     },
 }); 

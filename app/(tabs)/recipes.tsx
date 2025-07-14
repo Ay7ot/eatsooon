@@ -58,10 +58,11 @@ export default function RecipesScreen() {
                 setIsUsingFallback(false);
             }
 
-            // Fetch recipes by ingredients
+            // Fetch recipes by ingredients - this now returns cached results immediately if available
             const basicRecipes = await recipeService.getRecipesByIngredients(
                 ingredients,
-                isUsingFallback ? 10 : 20
+                isUsingFallback ? 10 : 20,
+                true // Use cache for immediate results
             );
 
             if (basicRecipes.length === 0) {
@@ -70,7 +71,7 @@ export default function RecipesScreen() {
                 return;
             }
 
-            // Get detailed information
+            // Get detailed information - this is now much faster with improved caching
             const recipeIds = basicRecipes.map(r => r.id);
             const detailedRecipes = await recipeService.getRecipesInformationBulk(recipeIds);
 
@@ -79,13 +80,19 @@ export default function RecipesScreen() {
                 const basic = basicRecipes.find(b => b.id === detailed.id);
                 return {
                     ...detailed,
-                    usedIngredientCount: basic?.usedIngredientCount || 0,
-                    missedIngredientCount: basic?.missedIngredientCount || 0,
+                    usedIngredientCount: basic?.usedIngredientCount || detailed.usedIngredientCount || 0,
+                    missedIngredientCount: basic?.missedIngredientCount || detailed.missedIngredientCount || 0,
                 };
             });
 
             setRecipes(finalRecipes);
             setFilteredRecipes(finalRecipes);
+
+            // Prefetch common recipes in background for better future performance
+            if (!isUsingFallback) {
+                recipeService.prefetchCommonRecipes();
+            }
+
         } catch (err) {
             console.error('Error fetching recipes:', err);
             setError(err instanceof Error ? err.message : 'Failed to load recipes');

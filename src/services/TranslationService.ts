@@ -20,7 +20,7 @@ class TranslationService {
      */
     async translate(text: string | undefined | null, targetLanguage: string): Promise<string> {
         if (!text) return '';
-        if (!process.env.EXPO_OPENAI_API_KEY) {
+        if (!process.env.EXPO_PUBLIC_OPENAI_API_KEY) {
             console.warn('OpenAI API key missing. Returning original text.');
             return text;
         }
@@ -30,7 +30,7 @@ class TranslationService {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${process.env.EXPO_OPENAI_API_KEY}`,
+                    'Authorization': `Bearer ${process.env.EXPO_PUBLIC_OPENAI_API_KEY}`,
                 },
                 body: JSON.stringify({
                     model: 'gpt-3.5-turbo',

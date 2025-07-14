@@ -38,8 +38,9 @@ Develop a mobile app called *Eat Soon* to help reduce food waste by scanning pro
 
 7. **Recipe Suggestions:**
 
-   * Based on products nearing expiration.
-   * External API (Spoonacular/Edamam) or Firestore.
+   * Based on products nearing expiration using AI-generated recipes.
+   * OpenAI integration for personalized recipe generation.
+   * Default recipe collection for users without inventory items.
 
 8. **User Authentication:**
 
@@ -54,5 +55,5 @@ Develop a mobile app called *Eat Soon* to help reduce food waste by scanning pro
 * **OCR:** Google ML Kit
 * **Barcode Scanning:** ML Kit Barcode Scanning
 * **Product API:** OpenFoodFacts
-* **Recipes:** External API or Firestore
+* **Recipes:** OpenAI API integration with local default recipes
 * **Optional:** AutoML Vision or Roboflow

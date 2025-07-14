@@ -30,13 +30,13 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
       registerBackgroundTask();
 
-      // Test the background task functionality (for development/testing)
-      // Remove this in production
-      // Delay longer to give user time to authenticate
-      setTimeout(() => {
-        console.log('🧪 Running notification test in 10 seconds...');
-        testBackgroundTask();
-      }, 10000); // Test after 10 seconds
+      // // Test the background task functionality (for development/testing)
+      // // Remove this in production
+      // // Delay longer to give user time to authenticate
+      // setTimeout(() => {
+      //   console.log('🧪 Running notification test in 10 seconds...');
+      //   testBackgroundTask();
+      // }, 10000); // Test after 10 seconds
     }
   }, [loaded]);
 
