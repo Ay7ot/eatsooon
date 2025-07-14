@@ -256,7 +256,7 @@
   "inventory_expires_in": "Expires in {{count}}d",
   "inventory_expired_ago": "Expired {{count}}d ago",
   "family_members_family_members": "Family Members",
-  "act_recipe_viewed_title": "Viewed {{recipe}} recipe",
+  "act_recipe_viewed_title": "Viewed {{recipeName}} recipe",
   "act_recipe_viewed_sub": "Recipe details opened",
   "act_item_added_title": "{{itemName}} added to pantry",
   "act_item_added_sub": "New item in your inventory",

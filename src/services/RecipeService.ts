@@ -1,4 +1,6 @@
+import i18n from '../localization/i18n';
 import { Recipe, recipeFromDetailedJson, recipeFromJson } from '../models/RecipeModel';
+import { translationService } from './TranslationService';
 
 const SPOONACULAR_API_KEY = process.env.EXPO_PUBLIC_SPOONACULAR_API_KEY;
 const BASE_URL = 'https://api.spoonacular.com/recipes';
@@ -35,7 +37,13 @@ class RecipeService {
             }
 
             const data = await response.json();
-            return data.map(recipeFromJson);
+            const recipes = data.map(recipeFromJson);
+
+            if (i18n.language === 'es') {
+                return Promise.all(recipes.map((r: Recipe) => translationService.translateRecipe(r, 'es')));
+            }
+
+            return recipes;
         } catch (error) {
             console.error('Error fetching recipes by ingredients:', error);
             throw error;
@@ -61,7 +69,13 @@ class RecipeService {
             }
 
             const data = await response.json();
-            return data.map(recipeFromDetailedJson);
+            const recipes = data.map(recipeFromDetailedJson);
+
+            if (i18n.language === 'es') {
+                return Promise.all(recipes.map((r: Recipe) => translationService.translateRecipe(r, 'es')));
+            }
+
+            return recipes;
         } catch (error) {
             console.error('Error fetching recipe details:', error);
             throw error;
