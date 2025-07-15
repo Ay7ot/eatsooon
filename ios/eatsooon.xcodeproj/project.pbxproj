@@ -7,26 +7,26 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		057EB30CE407B84EFB9399B7 /* libPods-eatsooon.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8D7A2D298B6D30BDABA085FE /* libPods-eatsooon.a */; };
-		124A84FD3D264CC36B36468D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 600A6EC2E0F7C29B00243113 /* ExpoModulesProvider.swift */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		300A059ED9098C77D0E17706 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E3219592EC9E9453A6644713 /* PrivacyInfo.xcprivacy */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
+		8E069A597E454EAC12B56991 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4DAF3C760E2F95522025304 /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		D1ABC336F6438223B4BD3E23 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 5133B388A1BD2545392FAFC8 /* PrivacyInfo.xcprivacy */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
+		F59109C0B8A7E4D2F01C7F60 /* libPods-eatsooon.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D042F5C9B9B4BE4742E6B4CC /* libPods-eatsooon.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		088A260B3BF4DBDB9DBAB682 /* Pods-eatsooon.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-eatsooon.release.xcconfig"; path = "Target Support Files/Pods-eatsooon/Pods-eatsooon.release.xcconfig"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* eatsooon.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = eatsooon.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = eatsooon/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = eatsooon/Info.plist; sourceTree = "<group>"; };
-		5133B388A1BD2545392FAFC8 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = eatsooon/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		600A6EC2E0F7C29B00243113 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-eatsooon/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		8D7A2D298B6D30BDABA085FE /* libPods-eatsooon.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-eatsooon.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A0C6FDA86C07018A21AE59FC /* Pods-eatsooon.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-eatsooon.debug.xcconfig"; path = "Target Support Files/Pods-eatsooon/Pods-eatsooon.debug.xcconfig"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = eatsooon/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		C4A6C12F4240FB8699399E3C /* Pods-eatsooon.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-eatsooon.debug.xcconfig"; path = "Target Support Files/Pods-eatsooon/Pods-eatsooon.debug.xcconfig"; sourceTree = "<group>"; };
-		C74C256CCAD9370C7A53EFFC /* Pods-eatsooon.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-eatsooon.release.xcconfig"; path = "Target Support Files/Pods-eatsooon/Pods-eatsooon.release.xcconfig"; sourceTree = "<group>"; };
+		D042F5C9B9B4BE4742E6B4CC /* libPods-eatsooon.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-eatsooon.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		E3219592EC9E9453A6644713 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = eatsooon/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		E4DAF3C760E2F95522025304 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-eatsooon/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = eatsooon/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* eatsooon-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "eatsooon-Bridging-Header.h"; path = "eatsooon/eatsooon-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -37,19 +37,21 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				057EB30CE407B84EFB9399B7 /* libPods-eatsooon.a in Frameworks */,
+				F59109C0B8A7E4D2F01C7F60 /* libPods-eatsooon.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		01D4C6491796302D38D75B41 /* ExpoModulesProviders */ = {
+		0544B15134ED5D676180852F /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				1DD5E65C1F7770FF8DB01FD2 /* eatsooon */,
+				A0C6FDA86C07018A21AE59FC /* Pods-eatsooon.debug.xcconfig */,
+				088A260B3BF4DBDB9DBAB682 /* Pods-eatsooon.release.xcconfig */,
 			);
-			name = ExpoModulesProviders;
+			name = Pods;
+			path = Pods;
 			sourceTree = "<group>";
 		};
 		13B07FAE1A68108700A75B9A /* eatsooon */ = {
@@ -61,15 +63,7 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				5133B388A1BD2545392FAFC8 /* PrivacyInfo.xcprivacy */,
-			);
-			name = eatsooon;
-			sourceTree = "<group>";
-		};
-		1DD5E65C1F7770FF8DB01FD2 /* eatsooon */ = {
-			isa = PBXGroup;
-			children = (
-				600A6EC2E0F7C29B00243113 /* ExpoModulesProvider.swift */,
+				E3219592EC9E9453A6644713 /* PrivacyInfo.xcprivacy */,
 			);
 			name = eatsooon;
 			sourceTree = "<group>";
@@ -78,7 +72,7 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				8D7A2D298B6D30BDABA085FE /* libPods-eatsooon.a */,
+				D042F5C9B9B4BE4742E6B4CC /* libPods-eatsooon.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -97,8 +91,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				91B3C04AC5E33C29F538F936 /* Pods */,
-				01D4C6491796302D38D75B41 /* ExpoModulesProviders */,
+				0544B15134ED5D676180852F /* Pods */,
+				B33225BC4BEADC92FC0E3744 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -113,14 +107,12 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		91B3C04AC5E33C29F538F936 /* Pods */ = {
+		B33225BC4BEADC92FC0E3744 /* ExpoModulesProviders */ = {
 			isa = PBXGroup;
 			children = (
-				C4A6C12F4240FB8699399E3C /* Pods-eatsooon.debug.xcconfig */,
-				C74C256CCAD9370C7A53EFFC /* Pods-eatsooon.release.xcconfig */,
+				C379AF18CB49B77089FD800A /* eatsooon */,
 			);
-			name = Pods;
-			path = Pods;
+			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
@@ -132,6 +124,14 @@
 			path = eatsooon/Supporting;
 			sourceTree = "<group>";
 		};
+		C379AF18CB49B77089FD800A /* eatsooon */ = {
+			isa = PBXGroup;
+			children = (
+				E4DAF3C760E2F95522025304 /* ExpoModulesProvider.swift */,
+			);
+			name = eatsooon;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -140,13 +140,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "eatsooon" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				3BA3FC15D82040654F5C1B71 /* [Expo] Configure project */,
+				5FDAFBCFF2627D6B26AE7E7A /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				A54A50E278E02D84CCF5F97D /* [CP] Embed Pods Frameworks */,
+				0F03E88E72891A1118E16613 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -196,7 +196,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				D1ABC336F6438223B4BD3E23 /* PrivacyInfo.xcprivacy in Resources */,
+				300A059ED9098C77D0E17706 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -240,7 +240,25 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		3BA3FC15D82040654F5C1B71 /* [Expo] Configure project */ = {
+		0F03E88E72891A1118E16613 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-eatsooon/Pods-eatsooon-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-eatsooon/Pods-eatsooon-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		5FDAFBCFF2627D6B26AE7E7A /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -313,24 +331,6 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-eatsooon/Pods-eatsooon-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		A54A50E278E02D84CCF5F97D /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-eatsooon/Pods-eatsooon-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-eatsooon/Pods-eatsooon-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -339,7 +339,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				124A84FD3D264CC36B36468D /* ExpoModulesProvider.swift in Sources */,
+				8E069A597E454EAC12B56991 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -348,7 +348,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C4A6C12F4240FB8699399E3C /* Pods-eatsooon.debug.xcconfig */;
+			baseConfigurationReference = A0C6FDA86C07018A21AE59FC /* Pods-eatsooon.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -373,8 +373,8 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.eatsooon;
-				PRODUCT_NAME = "eatsooon";
+				PRODUCT_BUNDLE_IDENTIFIER = com.miqui.eatsooon;
+				PRODUCT_NAME = eatsooon;
 				SWIFT_OBJC_BRIDGING_HEADER = "eatsooon/eatsooon-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -385,7 +385,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C74C256CCAD9370C7A53EFFC /* Pods-eatsooon.release.xcconfig */;
+			baseConfigurationReference = 088A260B3BF4DBDB9DBAB682 /* Pods-eatsooon.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -405,8 +405,8 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.eatsooon;
-				PRODUCT_NAME = "eatsooon";
+				PRODUCT_BUNDLE_IDENTIFIER = com.miqui.eatsooon;
+				PRODUCT_NAME = eatsooon;
 				SWIFT_OBJC_BRIDGING_HEADER = "eatsooon/eatsooon-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

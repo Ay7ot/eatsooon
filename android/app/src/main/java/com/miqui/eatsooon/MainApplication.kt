@@ -1,4 +1,4 @@
-package com.anonymous.eatsooon
+package com.miqui.eatsooon
 
 import android.app.Application
 import android.content.res.Configuration

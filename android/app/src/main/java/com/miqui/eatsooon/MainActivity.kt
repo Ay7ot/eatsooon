@@ -1,4 +1,4 @@
-package com.anonymous.eatsooon
+package com.miqui.eatsooon
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

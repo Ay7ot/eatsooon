@@ -43,3 +43,7 @@ app-example
 
 expo-env.d.ts
 # @end expo-cli
+
+# Signing
+android/app/eatsooon-release-key.keystore
+android/app/keystore.properties

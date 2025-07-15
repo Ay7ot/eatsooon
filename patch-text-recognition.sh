@@ -16,11 +16,20 @@ fi
 
 echo "Patching $FILE_PATH..."
 
+# Determine the correct sed -i syntax based on the operating system
+sedi=()
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  sedi=(-i '')
+else
+  sedi=(-i)
+fi
+
 # Use sed to replace the outdated SDK versions.
-# The -i'' flag is used for in-place editing that works on both macOS and Linux.
-sed -i'' "s/compileSdkVersion safeExtGet('TextRecognition_compileSdkVersion', 29)/compileSdkVersion safeExtGet('TextRecognition_compileSdkVersion', 35)/" "$FILE_PATH"
-sed -i'' "s/buildToolsVersion safeExtGet('TextRecognition_buildToolsVersion', '29.0.2')/buildToolsVersion safeExtGet('TextRecognition_buildToolsVersion', '35.0.0')/" "$FILE_PATH"
-sed -i'' "s/minSdkVersion safeExtGet('TextRecognition_minSdkVersion', 16)/minSdkVersion safeExtGet('TextRecognition_minSdkVersion', 24)/" "$FILE_PATH"
-sed -i'' "s/targetSdkVersion safeExtGet('TextRecognition_targetSdkVersion', 29)/targetSdkVersion safeExtGet('TextRecognition_targetSdkVersion', 35)/" "$FILE_PATH"
+# The sedi variable will contain the correct flags for in-place editing.
+sed "${sedi[@]}" "s/compileSdkVersion safeExtGet('TextRecognition_compileSdkVersion', 29)/compileSdkVersion safeExtGet('TextRecognition_compileSdkVersion', 34)/" "$FILE_PATH"
+sed "${sedi[@]}" "s/buildToolsVersion safeExtGet('TextRecognition_buildToolsVersion', '29.0.2')/buildToolsVersion safeExtGet('TextRecognition_buildToolsVersion', '34.0.0')/" "$FILE_PATH"
+sed "${sedi[@]}" "s/minSdkVersion safeExtGet('TextRecognition_minSdkVersion', 16)/minSdkVersion safeExtGet('TextRecognition_minSdkVersion', 23)/" "$FILE_PATH"
+sed "${sedi[@]}" "s/targetSdkVersion safeExtGet('TextRecognition_targetSdkVersion', 29)/targetSdkVersion safeExtGet('TextRecognition_targetSdkVersion', 34)/" "$FILE_PATH"
+
 
 echo "Patch applied successfully!" 

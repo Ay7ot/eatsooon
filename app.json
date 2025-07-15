@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "eatsooon",
+    "name": "Eatsooon",
     "slug": "eatsooon",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
     "scheme": "eatsooon",
@@ -10,13 +10,12 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.eatsooon",
+      "bundleIdentifier": "com.miqui.eatsooon",
       "appleTeamId": "88NCV6QJ5S",
+      "buildNumber": "4",
       "infoPlist": {
-        "UIBackgroundModes": [
-          "fetch",
-          "processing"
-        ]
+        "UIBackgroundModes": ["fetch", "processing"],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -25,10 +24,9 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "permissions": [
-        "android.permission.CAMERA"
-      ],
-      "package": "com.anonymous.eatsooon"
+      "permissions": ["android.permission.CAMERA"],
+      "package": "com.miqui.eatsooon",
+      "versionCode": 4
     },
     "web": {
       "bundler": "metro",
