@@ -59,12 +59,10 @@ export default function SignInScreen() {
             return;
         }
 
-        console.log('SignInScreen - attempting sign in');
         setIsLoading(true);
         const success = await signIn(email, password);
         setIsLoading(false);
 
-        console.log('SignInScreen - sign in result:', success);
         if (!success) {
             setToast({
                 message: t('login_failed'),

@@ -329,6 +329,12 @@
   "family_members_remove_failed": "Error al eliminar miembro: ",
   "family_members_error_loading": "Error al cargar miembros: {{error}}",
   "family_members_no_members_found": "No se encontraron miembros de la familia",
+  "family_members_delete_family": "Eliminar Familia",
+  "family_members_delete_family_dialog_title": "Eliminar Familia",
+  "family_members_delete_family_dialog_desc": "¿Estás seguro de que quieres eliminar permanentemente esta familia? Esta acción no se puede deshacer. Todos los miembros serán removidos y todos los datos compartidos se perderán.",
+  "family_members_delete_family_success": "La familia ha sido eliminada.",
+  "family_members_delete_family_switched": "La familia ha sido eliminada. Cambiado a {{familyName}}.",
+  "family_members_delete_family_failed": "Error al eliminar familia: ",
 
   "scan_product_instruction": "Alinea el código de barras dentro del marco para escanear información del producto",
   "scan_expiry_instruction": "Apunta la cámara al texto de la fecha de vencimiento para detectar información de caducidad",
@@ -431,5 +437,8 @@
   "notification_test_title": "Notificación de Prueba",
   "notification_test_body": "Se encontraron {{count}} artículos que vencen en modo de prueba",
   "notification_channel_name": "Artículos por Vencer",
-  "notification_channel_description": "Notificaciones para artículos que vencen pronto"
+  "notification_channel_description": "Notificaciones para artículos que vencen pronto",
+
+  "item_details": "Detalles del Artículo",
+  "view_edit_item_details": "Ver y editar detalles del artículo"
 }

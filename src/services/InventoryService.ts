@@ -1,4 +1,4 @@
-import { addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore';
 import { FoodItem, foodItemFromFirestore } from '../models/FoodItem';
 import { activityService } from './ActivityService';
 import { familyService } from './FamilyService';
@@ -100,6 +100,27 @@ class InventoryService {
         const user = auth.currentUser;
         if (!user) throw new Error('User not authenticated');
 
+        let docPath;
+        if (params.familyId) {
+            docPath = doc(db, 'families', params.familyId, 'pantry', params.itemId);
+        } else {
+            docPath = doc(db, 'inventory', user.uid, 'items', params.itemId);
+        }
+
+        // Get current item name for activity logging
+        let currentItemName = 'Item';
+        let currentImageUrl: string | undefined;
+        try {
+            const docSnap = await getDoc(docPath);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                currentItemName = data.name || 'Item';
+                currentImageUrl = data.imageUrl;
+            }
+        } catch (error) {
+            console.warn('Error getting current item details:', error);
+        }
+
         const updateData: any = {};
         if (params.name !== undefined) updateData.name = params.name.trim();
         if (params.expirationDate !== undefined) updateData.expirationDate = params.expirationDate;
@@ -108,17 +129,12 @@ class InventoryService {
         if (params.unit !== undefined) updateData.unit = params.unit;
         if (params.imageUrl !== undefined) updateData.imageUrl = params.imageUrl;
 
-        let docPath;
-        if (params.familyId) {
-            docPath = doc(db, 'families', params.familyId, 'pantry', params.itemId);
-        } else {
-            docPath = doc(db, 'inventory', user.uid, 'items', params.itemId);
-        }
-
         await updateDoc(docPath, updateData);
 
-        // Log activity
-        await activityService.logItemUpdated(params.name || 'Item', params.imageUrl);
+        // Log activity with the updated name if provided, otherwise use current name
+        const activityName = params.name || currentItemName;
+        const activityImageUrl = params.imageUrl || currentImageUrl;
+        await activityService.logItemUpdated(activityName, activityImageUrl);
     }
 
     // Delete food item
@@ -133,10 +149,24 @@ class InventoryService {
             docPath = doc(db, 'inventory', user.uid, 'items', itemId);
         }
 
+        // Get item details before deletion for activity logging
+        let itemName = 'Item';
+        let imageUrl: string | undefined;
+        try {
+            const docSnap = await getDoc(docPath);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                itemName = data.name || 'Item';
+                imageUrl = data.imageUrl;
+            }
+        } catch (error) {
+            console.warn('Error getting item details before deletion:', error);
+        }
+
         await deleteDoc(docPath);
 
-        // Log activity
-        await activityService.logItemDeleted('Item', undefined);
+        // Log activity with actual item name
+        await activityService.logItemDeleted(itemName, imageUrl);
     }
 
     async getExpiringSoonItems(days: number = 3): Promise<FoodItem[]> {

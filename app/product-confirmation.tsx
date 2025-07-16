@@ -211,25 +211,12 @@ export default function ProductConfirmationScreen() {
             newErrors.productName = t('confirm_name_short');
         }
 
-        if (!selectedCategory) {
-            newErrors.category = t('confirm_category_required');
-        }
-
-        if (!quantity.trim()) {
-            newErrors.quantity = t('confirm_quantity_required');
-        } else {
+        // Only validate quantity if it's provided
+        if (quantity.trim()) {
             const qty = parseFloat(quantity);
             if (isNaN(qty) || qty <= 0) {
                 newErrors.quantity = t('confirm_quantity_invalid');
             }
-        }
-
-        if (!selectedUnit) {
-            newErrors.unit = t('confirm_unit_required');
-        }
-
-        if (!selectedLocation) {
-            newErrors.location = t('confirm_location_required');
         }
 
         if (expiryDate.getTime() === NO_DATE_SET.getTime()) {
@@ -260,15 +247,15 @@ export default function ProductConfirmationScreen() {
         setShowPantryChoice(false);
         setIsLoading(true);
         try {
-            const qtyNum = parseFloat(quantity);
+            const qtyNum = quantity.trim() ? parseFloat(quantity) : 1;
             const familyId = scope === 'family' ? currentFamilyId : null;
 
             await inventoryService.addFoodItem({
                 name: productName.trim(),
                 expirationDate: expiryDate,
-                category: selectedCategory,
+                category: selectedCategory || 'other',
                 quantity: qtyNum,
-                unit: selectedUnit,
+                unit: selectedUnit || 'pieces',
                 imageUrl: productImageUrl || undefined,
                 familyId: familyId,
             });
@@ -606,7 +593,7 @@ export default function ProductConfirmationScreen() {
                         {/* Category and Quantity Row */}
                         <View style={styles.formRow}>
                             <View style={[styles.formField, { flex: 1 }]}>
-                                <Text style={styles.fieldLabel}>{t('field_category')} *</Text>
+                                <Text style={styles.fieldLabel}>{t('field_category')}</Text>
                                 <Pressable
                                     style={[styles.inputContainer, errors.category && styles.inputError]}
                                     onPress={() => setShowCategoryPicker(true)}
@@ -623,7 +610,7 @@ export default function ProductConfirmationScreen() {
                             <View style={styles.formRowSpacer} />
 
                             <View style={[styles.formField, { flex: 1 }]}>
-                                <Text style={styles.fieldLabel}>{t('field_quantity')} *</Text>
+                                <Text style={styles.fieldLabel}>{t('field_quantity')}</Text>
                                 <View style={[styles.inputContainer, errors.quantity && styles.inputError]}>
                                     <MaterialIcons name="numbers" size={20} color={Colors.textTertiary} style={styles.inputIcon} />
                                     <TextInput
@@ -642,7 +629,7 @@ export default function ProductConfirmationScreen() {
                         {/* Unit and Storage Row */}
                         <View style={styles.formRow}>
                             <View style={[styles.formField, { flex: 1 }]}>
-                                <Text style={styles.fieldLabel}>{t('field_unit')} *</Text>
+                                <Text style={styles.fieldLabel}>{t('field_unit')}</Text>
                                 <Pressable
                                     style={[styles.inputContainer, errors.unit && styles.inputError]}
                                     onPress={() => setShowUnitPicker(true)}
@@ -659,7 +646,7 @@ export default function ProductConfirmationScreen() {
                             <View style={styles.formRowSpacer} />
 
                             <View style={[styles.formField, { flex: 1 }]}>
-                                <Text style={styles.fieldLabel}>{t('field_storage')} *</Text>
+                                <Text style={styles.fieldLabel}>{t('field_storage')}</Text>
                                 <Pressable
                                     style={[styles.inputContainer, errors.location && styles.inputError]}
                                     onPress={() => setShowLocationPicker(true)}
@@ -723,7 +710,6 @@ export default function ProductConfirmationScreen() {
                 date={tempDate}
                 mode="date"
                 minimumDate={new Date()}
-                maximumDate={new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)}
                 onConfirm={(date) => {
                     setExpiryDate(date);
                     setTempDate(date);
@@ -1206,7 +1192,7 @@ const styles = StyleSheet.create({
         color: Colors.backgroundWhite,
     },
     pantryChoiceContent: {
-        padding: 20,
+        padding: 10,
         alignItems: 'center',
     },
     pantryChoiceMessage: {
@@ -1224,8 +1210,7 @@ const styles = StyleSheet.create({
     },
     pantryChoiceButton: {
         flex: 1,
-        paddingVertical: 14,
-        paddingHorizontal: 20,
+        padding: 14,
         borderRadius: 12,
         alignItems: 'center',
     },

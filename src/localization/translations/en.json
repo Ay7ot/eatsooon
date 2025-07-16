@@ -335,6 +335,12 @@
   "family_members_remove_failed": "Failed to remove member: ",
   "family_members_error_loading": "Error loading members: {{error}}",
   "family_members_no_members_found": "No family members found",
+  "family_members_delete_family": "Delete Family",
+  "family_members_delete_family_dialog_title": "Delete Family",
+  "family_members_delete_family_dialog_desc": "Are you sure you want to permanently delete this family? This action cannot be undone. All members will be removed and all shared data will be lost.",
+  "family_members_delete_family_success": "Family has been deleted.",
+  "family_members_delete_family_switched": "Family has been deleted. Switched to {{familyName}}.",
+  "family_members_delete_family_failed": "Failed to delete family: ",
 
   "scan_product_instruction": "Align the barcode within the frame to scan product information",
   "scan_expiry_instruction": "Point camera at expiry date text to detect expiration information",
@@ -443,5 +449,8 @@
   "notification_test_title": "Test Notification",
   "notification_test_body": "Found {{count}} expiring items in test mode",
   "notification_channel_name": "Expiring Items",
-  "notification_channel_description": "Notifications for items expiring soon"
+  "notification_channel_description": "Notifications for items expiring soon",
+
+  "item_details": "Item Details",
+  "view_edit_item_details": "View and edit item details"
 }

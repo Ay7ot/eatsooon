@@ -41,7 +41,6 @@ class NotificationService {
                 finalStatus = status;
             }
             if (finalStatus !== 'granted') {
-                console.log('❌ Failed to get push token for push notification!');
                 return;
             }
 
@@ -50,12 +49,11 @@ class NotificationService {
                 token = (await Notifications.getExpoPushTokenAsync({
                     projectId: 'eatsooon'
                 })).data;
-                console.log('✅ Push token registered:', token);
             } catch (error) {
-                console.log('❌ Error getting push token:', error);
+                console.error('❌ Error getting push token:', error);
             }
         } else {
-            console.log('⚠️ Must use physical device for Push Notifications');
+            console.error('⚠️ Must use physical device for Push Notifications');
         }
 
         // Configure Android notification channel
@@ -79,12 +77,9 @@ class NotificationService {
      */
     async scheduleInventoryNotifications(): Promise<void> {
         try {
-            console.log('🔔 Starting inventory notification check...');
-
             // 1. Get expiring items efficiently (this method already checks auth)
             const items = await inventoryService.getExpiringSoonItems(3);
             if (!items || items.length === 0) {
-                console.log('📦 No expiring items found in inventory');
                 return;
             }
 
@@ -96,8 +91,6 @@ class NotificationService {
 
             // 4. Schedule the notifications
             const scheduledCount = await this.scheduleNotificationConfigs(notificationConfigs);
-
-            console.log(`✅ Scheduled ${scheduledCount} notifications for ${items.length} items`);
 
         } catch (error) {
             console.error('❌ Error scheduling inventory notifications:', error);
@@ -214,8 +207,7 @@ class NotificationService {
                     } as Notifications.TimeIntervalTriggerInput
                 });
 
-                console.log(`📅 Scheduled: ${config.title} for ${config.data.itemName} at ${config.trigger.toLocaleString()}`);
-                scheduledCount++;
+               scheduledCount++;
 
             } catch (error) {
                 console.error(`❌ Failed to schedule notification for ${config.data.itemName}:`, error);
@@ -238,7 +230,6 @@ class NotificationService {
                 }
             }
 
-            console.log('🧹 Cleared existing inventory notifications');
         } catch (error) {
             console.error('❌ Error clearing notifications:', error);
         }
@@ -275,7 +266,6 @@ class NotificationService {
         const { data } = notification.request.content;
 
         if (data?.type === 'expiry-alert') {
-            console.log(`🔔 Expiry notification received for: ${data.itemName}`);
             // You can add custom handling here (e.g., navigate to inventory)
         }
     }

@@ -48,7 +48,7 @@ service cloud.firestore {
     // - Create: any authenticated user can create a family where they are the adminUserId.
     // - Read: members of the family can read.
     // - Update: only the adminUserId can update family settings.
-    // - Delete: not allowed from client.
+    // - Delete: only the adminUserId can delete the family.
     match /families/{familyId} {
       allow create: if request.auth != null &&
         request.resource.data.adminUserId == request.auth.uid;
@@ -73,7 +73,24 @@ service cloud.firestore {
         request.resource.data.statistics.totalItems == resource.data.statistics.totalItems &&
         request.resource.data.statistics.wasteReduced == resource.data.statistics.wasteReduced;
 
-      allow delete: if false;
+      // Allow family admin to delete the family
+      allow delete: if request.auth != null &&
+        resource.data.adminUserId == request.auth.uid;
+
+      // Family Pantry Subcollection
+      // Path: families/{familyId}/pantry/{itemId}
+      // - Family members can create, read, update, and delete pantry items.
+      // - Family admins can delete all pantry items when deleting the family.
+      match /pantry/{itemId} {
+        allow read, write: if request.auth != null &&
+          exists(/databases/$(database)/documents/familyMembers/$(familyId)) &&
+          get(/databases/$(database)/documents/familyMembers/$(familyId)).data.members.keys().hasAny([request.auth.uid]);
+        
+        // Allow family admin to delete pantry items when deleting the family
+        allow delete: if request.auth != null &&
+          exists(/databases/$(database)/documents/families/$(familyId)) &&
+          get(/databases/$(database)/documents/families/$(familyId)).data.adminUserId == request.auth.uid;
+      }
     }
 
     // Family Members Document
@@ -111,7 +128,10 @@ service cloud.firestore {
           )
         );
 
-      allow delete: if false;
+      // Allow family admin to delete the family members document
+      allow delete: if request.auth != null &&
+        exists(/databases/$(database)/documents/families/$(familyId)) &&
+        get(/databases/$(database)/documents/families/$(familyId)).data.adminUserId == request.auth.uid;
     }
 
     // Family Invitations Collection
@@ -139,8 +159,10 @@ service cloud.firestore {
         request.auth.token.email != null &&
         resource.data.inviteeEmail == request.auth.token.email;
 
-      // Delete: not allowed from client.
-      allow delete: if false;
+      // Allow family admin to delete invitations for their family
+      allow delete: if request.auth != null &&
+        exists(/databases/$(database)/documents/families/$(resource.data.familyId)) &&
+        get(/databases/$(database)/documents/families/$(resource.data.familyId)).data.adminUserId == request.auth.uid;
     }
 
     // Family Activity Feed
@@ -164,6 +186,11 @@ service cloud.firestore {
 
       /* Updates / deletes are blocked from the client */
       allow update, delete: if false;
+      
+      /* Allow family admin to delete activities when deleting the family */
+      allow delete: if request.auth != null &&
+        exists(/databases/$(database)/documents/families/$(familyId)) &&
+        get(/databases/$(database)/documents/families/$(familyId)).data.adminUserId == request.auth.uid;
     }
   }
 } 

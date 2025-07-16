@@ -91,7 +91,13 @@ export default function InventoryScreen() {
 
     // --- RENDERERS --- //
 
-    const renderItem = ({ item }: { item: FoodItem }) => <InventoryItemCard item={item} />;
+    const renderItem = ({ item }: { item: FoodItem }) => (
+        <InventoryItemCard 
+            item={item} 
+            inventoryScope={inventoryScope}
+            currentFamilyId={currentFamilyId}
+        />
+    );
 
     return (
         <View style={styles.container}>
@@ -248,7 +254,7 @@ function SearchBar({ value, onChange }: { value: string; onChange: (v: string) =
     );
 }
 
-function InventoryItemCard({ item }: { item: FoodItem }) {
+function InventoryItemCard({ item, inventoryScope, currentFamilyId }: { item: FoodItem; inventoryScope: InventoryScope; currentFamilyId: string | null }) {
     const { t } = useTranslation();
     // Determine badge
     const days = daysUntilExpiration(item);
@@ -290,6 +296,7 @@ function InventoryItemCard({ item }: { item: FoodItem }) {
                 itemQuantity: item.quantity?.toString() || '1',
                 itemUnit: item.unit || '',
                 itemExpirationDate: item.expirationDate.toISOString(),
+                familyId: inventoryScope === 'family' ? currentFamilyId || '' : '',
             },
         });
     };

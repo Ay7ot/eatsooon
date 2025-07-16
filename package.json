@@ -24,9 +24,12 @@
     "date-fns": "^4.1.0",
     "expo": "~53.0.17",
     "expo-asset": "^11.1.7",
+    "expo-background-task": "~0.2.8",
     "expo-blur": "~14.1.5",
     "expo-camera": "~16.1.10",
     "expo-constants": "~17.1.7",
+    "expo-dev-client": "~5.2.4",
+    "expo-device": "~7.1.4",
     "expo-font": "~13.3.2",
     "expo-haptics": "~14.1.4",
     "expo-image": "~2.3.2",
@@ -57,10 +60,7 @@
     "react-native-text-recognition": "^1.0.2",
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
-    "react-redux": "^9.2.0",
-    "expo-background-task": "~0.2.8",
-    "expo-dev-client": "~5.2.4",
-    "expo-device": "~7.1.4"
+    "react-redux": "^9.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

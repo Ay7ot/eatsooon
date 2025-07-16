@@ -83,6 +83,7 @@ export default function InventoryItemDetailScreen() {
         itemQuantity: string;
         itemUnit: string;
         itemExpirationDate: string;
+        familyId: string;
     }>();
 
     // Form state
@@ -205,8 +206,10 @@ export default function InventoryItemDetailScreen() {
 
         setIsLoading(true);
         try {
+            const familyId = params.familyId && params.familyId.trim() !== '' ? params.familyId : null;
             await inventoryService.updateFoodItem({
                 itemId: params.itemId,
+                familyId: familyId,
                 name: productName.trim(),
                 category,
                 quantity: parseFloat(quantity) || 1,
@@ -248,7 +251,8 @@ export default function InventoryItemDetailScreen() {
     const confirmDelete = async () => {
         setIsLoading(true);
         try {
-            await inventoryService.deleteFoodItem(params.itemId);
+            const familyId = params.familyId && params.familyId.trim() !== '' ? params.familyId : null;
+            await inventoryService.deleteFoodItem(params.itemId, familyId);
             setShowAlert({
                 visible: true,
                 title: t('success'),
@@ -354,6 +358,18 @@ export default function InventoryItemDetailScreen() {
     return (
         <View style={styles.container}>
             <CustomAppBar title="Eatsooon" />
+
+            {/* Sub-header */}
+            <View style={styles.subHeader}>
+                <Pressable style={styles.backButton} onPress={handleBack}>
+                    <MaterialIcons name="arrow-back-ios" size={20} color={Colors.textSecondary} />
+                </Pressable>
+                <View style={styles.headerContent}>
+                    <Text style={styles.headerTitle}>{t('item_details')}</Text>
+                    <Text style={styles.headerSubtitle}>{t('view_edit_item_details')}</Text>
+                </View>
+            </View>
+
             <CustomAlert
                 visible={showAlert.visible}
                 title={showAlert.title}
@@ -782,6 +798,8 @@ const styles = StyleSheet.create({
         bottom: 30,
         right: 20,
         gap: 12,
+        display: 'flex',
+        flexDirection: 'row',
     },
     fab: {
         width: 56,
@@ -856,5 +874,38 @@ const styles = StyleSheet.create({
     },
     alertButtonTextDestructive: {
         color: Colors.backgroundWhite,
+    },
+    subHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.backgroundWhite,
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E7EB',
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 10,
+        backgroundColor: Colors.backgroundColor,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    headerContent: {
+        flex: 1,
+        marginLeft: 16,
+    },
+    headerTitle: {
+        fontFamily: 'Nunito-SemiBold',
+        fontSize: 18,
+        color: Colors.textPrimary,
+        lineHeight: 22,
+    },
+    headerSubtitle: {
+        fontFamily: 'Inter-Regular',
+        fontSize: 14,
+        color: Colors.textSecondary,
+        lineHeight: 18,
     },
 }); 

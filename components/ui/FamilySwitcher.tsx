@@ -30,6 +30,22 @@ export default function FamilySwitcher() {
         fetchFamilies();
     }, []);
 
+    // Listen to real-time changes in current family ID
+    useEffect(() => {
+        const unsubscribe = familyService.listenToCurrentFamilyId((familyId) => {
+            setCurrentId(familyId);
+        });
+        return unsubscribe;
+    }, []);
+
+    // Listen to real-time changes in user families list
+    useEffect(() => {
+        const unsubscribe = familyService.listenToUserFamilies((families) => {
+            setFamilies(families);
+        });
+        return unsubscribe;
+    }, []);
+
     useEffect(() => {
         // Listen to name changes for the current family (to reflect renames instantly)
         if (!currentId) return;

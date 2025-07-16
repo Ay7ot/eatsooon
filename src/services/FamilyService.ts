@@ -7,6 +7,7 @@ import {
     arrayRemove,
     arrayUnion,
     collection,
+    deleteDoc,
     deleteField,
     doc,
     getDoc,
@@ -90,7 +91,6 @@ class FamilyService {
             // Update user's family association
             await this.updateUserFamilyAssociation(this.currentUserId, familyId, true);
 
-            console.log('Family created successfully with ID:', familyId);
             return familyId;
         } catch (error) {
             console.error('Error creating family:', error);
@@ -216,7 +216,6 @@ class FamilyService {
 
             const invitationRef = await addDoc(collection(db, 'familyInvitations'), invitationData);
 
-            console.log('Invitation sent successfully with ID:', invitationRef.id);
             return invitationRef.id;
         } catch (error) {
             console.error('Error inviting member:', error);
@@ -269,13 +268,12 @@ class FamilyService {
             // Update invitation status
             await updateDoc(doc(db, 'familyInvitations', invitationId), {
                 status: InvitationStatus.ACCEPTED,
-                acceptedAt: serverTimestamp(),
+                respondedAt: serverTimestamp(),
             });
 
             // Update user's family association
             await this.updateUserFamilyAssociation(this.currentUserId, invitation.familyId, true);
 
-            console.log('Invitation accepted successfully');
         } catch (error) {
             console.error('Error accepting invitation:', error);
             throw new Error(`Failed to accept invitation: ${error}`);
@@ -327,7 +325,7 @@ class FamilyService {
             });
 
             await batch.commit();
-            console.log(`Member ${userId} removed successfully from family ${familyId}.`);
+
         } catch (error) {
             console.error('Error removing member:', error);
             throw new Error(`Failed to remove member: ${error}`);
@@ -358,7 +356,6 @@ class FamilyService {
                 [`members.${userId}.role`]: newRole,
             });
 
-            console.log('Member role updated successfully');
         } catch (error) {
             console.error('Error updating member role:', error);
             throw new Error(`Failed to update member role: ${error}`);
@@ -481,6 +478,52 @@ class FamilyService {
         }
     }
 
+    // Listen to real-time changes in user's family list
+    listenToUserFamilies(callback: (families: { id: string; name: string }[]) => void): () => void {
+        if (!this.currentUserId) {
+            callback([]);
+            return () => { };
+        }
+
+        const userDocRef = doc(db, 'users', this.currentUserId);
+        return onSnapshot(
+            userDocRef,
+            async (snap) => {
+                if (!snap.exists()) {
+                    callback([]);
+                    return;
+                }
+
+                const data = snap.data();
+                const familyIds: string[] = data?.familyIds ?? [];
+                if (familyIds.length === 0) {
+                    callback([]);
+                    return;
+                }
+
+                try {
+                    const promises = familyIds.map(async (familyId) => {
+                        const familyDoc = await getDoc(doc(db, 'families', familyId));
+                        return familyDoc.exists() ?
+                            { id: familyDoc.id, name: familyDoc.data().name ?? 'Family' } :
+                            null;
+                    });
+
+                    const results = await Promise.all(promises);
+                    const families = results.filter(result => result !== null) as { id: string; name: string }[];
+                    callback(families);
+                } catch (error) {
+                    console.warn('FamilyService listenToUserFamilies error', error);
+                    callback([]);
+                }
+            },
+            (error) => {
+                console.error('FamilyService listenToUserFamilies error', error);
+                callback([]);
+            }
+        );
+    }
+
     // Switch the active family for the user
     async switchFamily(newFamilyId: string): Promise<void> {
         try {
@@ -520,7 +563,7 @@ class FamilyService {
         }
     }
 
-    async deleteFamily(familyId: string): Promise<void> {
+    async deleteFamily(familyId: string): Promise<{ switchedToFamily?: { id: string; name: string } }> {
         if (!this.currentUserId) {
             throw new Error("No user is currently signed in.");
         }
@@ -534,48 +577,78 @@ class FamilyService {
             throw new Error("Only the family admin can delete the family.");
         }
 
-        const batch = writeBatch(db);
+        try {
+            // 1. Get all members to update their user documents
+            const members = await this.getFamilyMembers(familyId);
 
-        // 1. Get all members to update their user documents
-        const members = await this.getFamilyMembers(familyId);
-        for (const member of members) {
-            const userRef = doc(db, 'users', member.userId);
-            const userSnap = await getDoc(userRef);
-            if (userSnap.exists()) {
-                const userData = userSnap.data();
-                const updateData: any = {
-                    familyIds: arrayRemove(familyId)
-                };
-                if (userData.currentFamilyId === familyId) {
-                    updateData.currentFamilyId = null;
+            // 2. Update all member user documents to remove family association
+            const userUpdatePromises = members.map(async (member) => {
+                const userRef = doc(db, 'users', member.userId);
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists()) {
+                    const userData = userSnap.data();
+                    const updateData: any = {
+                        familyIds: arrayRemove(familyId)
+                    };
+                    if (userData.currentFamilyId === familyId) {
+                        updateData.currentFamilyId = null;
+                    }
+                    return updateDoc(userRef, updateData);
                 }
-                batch.update(userRef, updateData);
+                return Promise.resolve();
+            });
+
+            // 3. Delete all pending invitations for the family
+            const invitationsQuery = query(collection(db, 'familyInvitations'), where('familyId', '==', familyId));
+            const invitationsSnapshot = await getDocs(invitationsQuery);
+            const invitationDeletePromises = invitationsSnapshot.docs.map(invitationDoc =>
+                deleteDoc(doc(db, 'familyInvitations', invitationDoc.id))
+            );
+
+            // 4. Delete family activities subcollection (if it exists)
+            const activitiesQuery = query(collection(db, 'families', familyId, 'activities'));
+            const activitiesSnapshot = await getDocs(activitiesQuery);
+            const activityDeletePromises = activitiesSnapshot.docs.map(activityDoc =>
+                deleteDoc(doc(db, 'families', familyId, 'activities', activityDoc.id))
+            );
+
+            // 5. Delete family pantry subcollection (if it exists)
+            const pantryQuery = query(collection(db, 'families', familyId, 'pantry'));
+            const pantrySnapshot = await getDocs(pantryQuery);
+            const pantryDeletePromises = pantrySnapshot.docs.map(pantryDoc =>
+                deleteDoc(doc(db, 'families', familyId, 'pantry', pantryDoc.id))
+            );
+
+            // 6. Execute all user updates and deletions in parallel
+            await Promise.all([
+                ...userUpdatePromises,
+                ...invitationDeletePromises,
+                ...activityDeletePromises,
+                ...pantryDeletePromises
+            ]);
+
+            // 7. Delete the familyMembers document
+            await deleteDoc(doc(db, 'familyMembers', familyId));
+
+            // 8. Delete the main family document
+            await deleteDoc(doc(db, 'families', familyId));
+
+            // 9. If the deleted family was the current family, try to switch to another family
+            let switchedToFamily: { id: string; name: string } | undefined;
+            if (familyId === await this.getCurrentFamilyId()) {
+                const userFamilies = await this.getUserFamilies();
+                if (userFamilies.length > 0) {
+                    // Switch to the first available family
+                    await this.switchFamily(userFamilies[0].id);
+                    switchedToFamily = userFamilies[0];
+                }
             }
+
+            return { switchedToFamily };
+        } catch (error) {
+            console.error('Error deleting family:', error);
+            throw new Error(`Failed to delete family: ${error}`);
         }
-
-        // 2. Delete all items in the family pantry subcollection
-        const pantrySnapshot = await getDocs(collection(db, 'families', familyId, 'pantry'));
-        pantrySnapshot.docs.forEach(pantryDoc => {
-            batch.delete(doc(db, 'families', familyId, 'pantry', pantryDoc.id));
-        });
-
-
-        // 3. Delete all pending invitations for the family
-        const invitationsQuery = query(collection(db, 'familyInvitations'), where('familyId', '==', familyId));
-        const invitationsSnapshot = await getDocs(invitationsQuery);
-        invitationsSnapshot.forEach(invitationDoc => {
-            batch.delete(doc(db, 'familyInvitations', invitationDoc.id));
-        });
-
-        // 4. Delete the familyMembers document
-        batch.delete(doc(db, 'familyMembers', familyId));
-
-
-        // 5. Delete the main family document
-        batch.delete(doc(db, 'families', familyId));
-
-        await batch.commit();
-        console.log(`Family ${familyId} and all associated data deleted successfully.`);
     }
 
     // Get pending invitations for a family
@@ -645,7 +718,6 @@ class FamilyService {
                 status: InvitationStatus.DECLINED,
                 respondedAt: serverTimestamp(),
             });
-            console.log('Invitation declined successfully');
         } catch (error) {
             console.error('Error declining invitation:', error);
             throw new Error(`Failed to decline invitation: ${error}`);

@@ -8,7 +8,7 @@ import {
     updateProfile,
     User,
 } from 'firebase/auth';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth, db } from './firebase';
 
@@ -45,9 +45,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [isLoading, setIsLoading] = useState<boolean>(true);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            console.log('AuthContext - auth state changed:', user?.email || 'no user');
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
             setUser(user);
+
+            // If user is signed in, check if they have families but no current family ID
+            if (user) {
+                try {
+                    const userDoc = await getDoc(doc(db, 'users', user.uid));
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+                        const familyIds = userData.familyIds || [];
+                        const currentFamilyId = userData.currentFamilyId;
+
+                        // If user has families but no current family ID, set it to the first one
+                        if (familyIds.length > 0 && !currentFamilyId) {
+                            await updateDoc(doc(db, 'users', user.uid), {
+                                currentFamilyId: familyIds[0]
+                            });
+                            console.log(`Auto-set current family ID to: ${familyIds[0]} on app start`);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error checking user family status on auth state change:', error);
+                }
+            }
+
             setIsLoading(false);
         });
 
@@ -56,9 +78,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const signIn = async (email: string, password: string) => {
         try {
-            console.log('AuthContext - attempting sign in for:', email);
             await signInWithEmailAndPassword(auth, email, password);
-            console.log('AuthContext - sign in successful (no onboarding for existing users)');
+
+            // After successful sign in, check if user has families but no current family ID
+            const user = auth.currentUser;
+            if (user) {
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    const familyIds = userData.familyIds || [];
+                    const currentFamilyId = userData.currentFamilyId;
+
+                    // If user has families but no current family ID, set it to the first one
+                    if (familyIds.length > 0 && !currentFamilyId) {
+                        await updateDoc(doc(db, 'users', user.uid), {
+                            currentFamilyId: familyIds[0]
+                        });
+                        console.log(`Auto-set current family ID to: ${familyIds[0]}`);
+                    }
+                }
+            }
+
             return true;
         } catch (error) {
             console.error("Sign in error", error);
@@ -74,7 +114,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             });
 
             // Create user document in Firestore
-            console.log('AuthContext - Creating user document in Firestore');
             await setDoc(doc(db, 'users', userCredential.user.uid), {
                 uid: userCredential.user.uid,
                 email: email,
@@ -84,7 +123,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 currentFamilyId: null,
             });
 
-            console.log('AuthContext - User document created in Firestore successfully');
             return true;
         } catch (error) {
             console.error("Sign up error", error);
@@ -110,7 +148,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             await updateProfile(auth.currentUser, {
                 displayName: name,
             });
-            console.log('AuthContext - profile updated successfully');
             return true;
         } catch (error) {
             console.error("Update profile error", error);

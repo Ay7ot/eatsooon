@@ -1,6 +1,7 @@
 {
   "expo": {
-    "name": "Eatsooon",
+    "name": "eatsooon",
+    "displayName": "Eatsooon",
     "slug": "eatsooon",
     "version": "1.0.1",
     "orientation": "portrait",

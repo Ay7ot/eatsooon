@@ -1,4 +1,5 @@
 import CustomAppBar from '@/components/ui/CustomAppBar';
+import Toast from '@/components/ui/Toast';
 import { Colors } from '@/constants/Colors';
 import { useAppInventory } from '@/src/hooks/useAppInventory';
 import {
@@ -54,15 +55,13 @@ export default function FamilyMembersScreen() {
     const [editNameModal, setEditNameModal] = useState(false);
     const [confirmDeleteFamilyModal, setConfirmDeleteFamilyModal] = useState(false);
     const [newFamilyName, setNewFamilyName] = useState('');
-    const [messageModal, setMessageModal] = useState<{
+    const [toast, setToast] = useState<{
         visible: boolean;
         type: 'success' | 'error';
-        title: string;
         message: string;
     }>({
         visible: false,
         type: 'success',
-        title: '',
         message: ''
     });
 
@@ -71,6 +70,7 @@ export default function FamilyMembersScreen() {
     const [memberEmail, setMemberEmail] = useState('');
     const [invitationCode, setInvitationCode] = useState('');
     const [formLoading, setFormLoading] = useState(false);
+    const [deleteFamilyLoading, setDeleteFamilyLoading] = useState(false);
     const [memberToRemove, setMemberToRemove] = useState<FamilyMember | null>(null);
 
     useEffect(() => {
@@ -91,25 +91,23 @@ export default function FamilyMembersScreen() {
 
     // Helper functions for showing modals
     const showSuccessMessage = (title: string, message: string) => {
-        setMessageModal({
+        setToast({
             visible: true,
             type: 'success',
-            title,
             message
         });
     };
 
     const showErrorMessage = (title: string, message: string) => {
-        setMessageModal({
+        setToast({
             visible: true,
             type: 'error',
-            title,
             message
         });
     };
 
     const hideMessageModal = () => {
-        setMessageModal(prev => ({ ...prev, visible: false }));
+        setToast(prev => ({ ...prev, visible: false }));
     };
 
     const loadFamilyData = async () => {
@@ -255,14 +253,23 @@ export default function FamilyMembersScreen() {
     const handleDeleteFamily = async () => {
         if (!currentFamilyId) return;
 
+        setDeleteFamilyLoading(true);
         try {
-            await familyService.deleteFamily(currentFamilyId);
+            const result = await familyService.deleteFamily(currentFamilyId);
             setConfirmDeleteFamilyModal(false);
-            showSuccessMessage('Success', 'Family has been deleted.');
-            // After deletion, re-load data. The user will see the "No Family" state.
+            
+            if (result.switchedToFamily) {
+                showSuccessMessage('Success', t('family_members_delete_family_switched', { familyName: result.switchedToFamily.name }));
+            } else {
+                showSuccessMessage('Success', t('family_members_delete_family_success'));
+            }
+            
+            // After deletion, re-load data
             loadFamilyData();
         } catch (error) {
-            showErrorMessage('Error', 'Failed to delete family: ' + (error as Error).message);
+            showErrorMessage('Error', t('family_members_delete_family_failed') + (error as Error).message);
+        } finally {
+            setDeleteFamilyLoading(false);
         }
     };
 
@@ -272,14 +279,9 @@ export default function FamilyMembersScreen() {
     };
 
     const getTimeAgo = (date: Date): string => {
-        // Add debugging
-        console.log('getTimeAgo - input date:', date);
-        console.log('getTimeAgo - date type:', typeof date);
-        console.log('getTimeAgo - is valid date:', date instanceof Date && !isNaN(date.getTime()));
 
         // Handle invalid dates
         if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
-            console.log('getTimeAgo - invalid date, returning fallback');
             return t('family_members_just_now');
         }
 
@@ -289,7 +291,6 @@ export default function FamilyMembersScreen() {
         const hours = Math.floor(diff / (1000 * 60 * 60));
         const minutes = Math.floor(diff / (1000 * 60));
 
-        console.log('getTimeAgo - diff:', diff, 'days:', days, 'hours:', hours, 'minutes:', minutes);
 
         if (days > 0) {
             return days === 1 ? t('family_members_day_ago', { count: 1 }) :
@@ -472,11 +473,12 @@ export default function FamilyMembersScreen() {
                         {isCurrentUserAdmin && (
                             <View style={{ marginTop: 12 }}>
                                 <Pressable
-                                    style={styles.dangerButton}
+                                    style={[styles.dangerButton, deleteFamilyLoading && styles.disabledButton]}
                                     onPress={() => setConfirmDeleteFamilyModal(true)}
+                                    disabled={deleteFamilyLoading}
                                 >
                                     <MaterialIcons name="delete-forever" size={18} color={Colors.red} />
-                                    <Text style={styles.dangerButtonText}>Delete Family</Text>
+                                    <Text style={styles.dangerButtonText}>{t('family_members_delete_family')}</Text>
                                 </Pressable>
                             </View>
                         )}
@@ -671,23 +673,29 @@ export default function FamilyMembersScreen() {
                         <View style={[styles.modalIcon, { backgroundColor: Colors.red + '20' }]}>
                             <MaterialIcons name="warning" size={32} color={Colors.red} />
                         </View>
-                        <Text style={styles.modalTitle}>Delete Family</Text>
+                        <Text style={styles.modalTitle}>{t('family_members_delete_family_dialog_title')}</Text>
                         <Text style={styles.modalDescription}>
-                            Are you sure you want to permanently delete this family? This action cannot be undone. All members will be removed and all shared data will be lost.
+                            {t('family_members_delete_family_dialog_desc')}
                         </Text>
 
                         <View style={styles.modalButtons}>
                             <Pressable
                                 style={styles.modalButtonSecondary}
                                 onPress={() => setConfirmDeleteFamilyModal(false)}
+                                disabled={deleteFamilyLoading}
                             >
-                                <Text style={styles.modalButtonSecondaryText}>Cancel</Text>
+                                <Text style={styles.modalButtonSecondaryText}>{t('family_members_cancel')}</Text>
                             </Pressable>
                             <Pressable
                                 style={[styles.modalButtonPrimary, { backgroundColor: Colors.red }]}
                                 onPress={handleDeleteFamily}
+                                disabled={deleteFamilyLoading}
                             >
-                                <Text style={styles.modalButtonPrimaryText}>Delete</Text>
+                                {deleteFamilyLoading ? (
+                                    <ActivityIndicator size="small" color={Colors.backgroundWhite} />
+                                ) : (
+                                    <Text style={styles.modalButtonPrimaryText}>{t('family_members_delete_family')}</Text>
+                                )}
                             </Pressable>
                         </View>
                     </View>
@@ -750,40 +758,12 @@ export default function FamilyMembersScreen() {
             </Modal>
 
             {/* Message Modal (Success/Error) */}
-            <Modal
-                visible={messageModal.visible}
-                transparent
-                animationType="fade"
-                statusBarTranslucent={true}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={[styles.modalIcon, {
-                            backgroundColor: messageModal.type === 'success' ? Colors.secondaryColor + '20' : Colors.red + '20'
-                        }]}>
-                            <MaterialIcons
-                                name={messageModal.type === 'success' ? 'check-circle' : 'error'}
-                                size={32}
-                                color={messageModal.type === 'success' ? Colors.secondaryColor : Colors.red}
-                            />
-                        </View>
-                        <Text style={styles.modalTitle}>{messageModal.title}</Text>
-                        <Text style={styles.modalDescription}>{messageModal.message}</Text>
-
-                        <View style={styles.modalButtons}>
-                            <Pressable
-                                style={[styles.modalButtonPrimary, {
-                                    backgroundColor: messageModal.type === 'success' ? Colors.secondaryColor : Colors.red,
-                                    width: '100%'
-                                }]}
-                                onPress={hideMessageModal}
-                            >
-                                <Text style={styles.modalButtonPrimaryText}>OK</Text>
-                            </Pressable>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
+            <Toast
+                message={toast.message}
+                type={toast.type}
+                visible={toast.visible}
+                onHide={hideMessageModal}
+            />
         </View>
     );
 }
@@ -1204,6 +1184,9 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter-SemiBold',
         fontSize: 14,
         color: Colors.red,
+    },
+    disabledButton: {
+        opacity: 0.7,
     },
     // Modal Styles
     modalOverlay: {
