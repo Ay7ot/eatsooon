@@ -86,23 +86,26 @@ class RecipeService {
      * @param ingredients Array of ingredient names from user's inventory
      * @param limit Number of recipes to return
      * @param useCache Whether to return cached results immediately
+     * @param isExpiringSoon Whether the ingredients are expiring soon
      * @returns Promise<Recipe[]>
      */
     async getRecipesByIngredients(
         ingredients: string[],
         limit: number = 20,
-        useCache: boolean = true
+        useCache: boolean = true,
+        isExpiringSoon: boolean = false
     ): Promise<Recipe[]> {
         try {
             let recipes: Recipe[];
+            const language = i18n.language;
 
             if (ingredients.length === 0) {
                 // No ingredients provided - return default recipes
                 console.log('No ingredients provided, using default recipes');
-                recipes = this.getDefaultRecipesForUser(limit);
+                recipes = await this.getDefaultRecipesForUser(limit);
             } else {
                 // Check cache first for immediate results
-                const cacheKey = ingredients.sort().join(',') + `_${limit}`;
+                const cacheKey = ingredients.sort().join(',') + `_${limit}_${language}`;
 
                 if (useCache && this.recipeCache.has(cacheKey)) {
                     const expiry = this.cacheExpiry.get(cacheKey) || 0;
@@ -113,32 +116,35 @@ class RecipeService {
                         // Queue background refresh if cache is > 30 minutes old
                         const cacheAge = Date.now() - (expiry - this.CACHE_DURATION);
                         if (cacheAge > 30 * 60 * 1000) {
-                            this.queueBackgroundGeneration(ingredients, limit);
+                            this.queueBackgroundGeneration(ingredients, limit, language);
                         }
 
-                        return this.applyTranslationsIfNeeded(recipes);
+                        // No need for applyTranslationsIfNeeded here, as cached recipes should be in the correct language
+                        return recipes;
                     }
                 }
 
                 // Generate new recipes
                 console.log('Generating fresh recipes');
-                recipes = await this.getAIGeneratedRecipes(ingredients, limit);
+                recipes = await this.getAIGeneratedRecipes(ingredients, limit, isExpiringSoon, language);
 
-                // If AI generation fails, fall back to default recipes
-                if (recipes.length === 0) {
-                    console.log('AI generation failed, falling back to default recipes');
-                    recipes = this.getDefaultRecipesForUser(limit);
+                // If AI generation fails, only fall back to default recipes if the user has very few ingredients.
+                // Otherwise, it's better to show nothing than irrelevant recipes.
+                if (recipes.length === 0 && ingredients.length < 3) {
+                    console.log('AI generation failed with few ingredients, falling back to default recipes');
+                    recipes = await this.getDefaultRecipesForUser(limit);
                 }
             }
 
-            return this.applyTranslationsIfNeeded(recipes);
+            // applyTranslationsIfNeeded is only for default recipes, which are handled in getDefaultRecipesForUser
+            return recipes;
         } catch (error) {
             const recipeError = RecipeErrorHandler.handleError(error, 'getRecipesByIngredients');
             RecipeErrorHandler.logError(recipeError);
 
             // Final fallback - always return default recipes on error
-            const fallbackRecipes = this.getDefaultRecipesForUser(limit);
-            return this.applyTranslationsIfNeeded(fallbackRecipes);
+            const fallbackRecipes = await this.getDefaultRecipesForUser(limit);
+            return fallbackRecipes;
         }
     }
 
@@ -182,12 +188,7 @@ class RecipeService {
                 }
             }
 
-            // Apply translations if language is Spanish
-            if (i18n.language === 'es') {
-                return Promise.all(recipes.map((r: Recipe) => translationService.translateRecipe(r, 'es')));
-            }
-
-            return recipes;
+            return this.applyTranslationsIfNeeded(recipes);
         } catch (error) {
             console.error('Error in getRecipesInformationBulk:', error);
             return [];
@@ -197,8 +198,8 @@ class RecipeService {
     /**
      * Get AI-generated recipes with caching and persistence
      */
-    private async getAIGeneratedRecipes(ingredients: string[], limit: number): Promise<Recipe[]> {
-        const cacheKey = ingredients.sort().join(',') + `_${limit}`;
+    private async getAIGeneratedRecipes(ingredients: string[], limit: number, isExpiringSoon: boolean = false, language: string): Promise<Recipe[]> {
+        const cacheKey = ingredients.sort().join(',') + `_${limit}_${language}`;
         const now = Date.now();
 
         // Check cache first
@@ -211,10 +212,11 @@ class RecipeService {
         }
 
         try {
-            const recipes = await aiRecipeService.generateRecipes(ingredients, limit);
+            // Generate recipes in the current language
+            const recipes = await aiRecipeService.generateRecipes(ingredients, limit, isExpiringSoon, language);
 
             if (recipes.length > 0) {
-                // Cache the results in both caches
+                // Cache the recipes in the current language
                 this.recipeCache.set(cacheKey, recipes);
                 this.cacheExpiry.set(cacheKey, now + this.CACHE_DURATION);
 
@@ -226,7 +228,7 @@ class RecipeService {
                 // Persist to storage
                 this.persistCache();
 
-                console.log(`Generated and cached ${recipes.length} AI recipes`);
+                console.log(`Generated and cached ${recipes.length} AI recipes in ${language}`);
             }
 
             return recipes;
@@ -240,7 +242,7 @@ class RecipeService {
     /**
      * Queue background recipe generation for cache warming
      */
-    private queueBackgroundGeneration(ingredients: string[], limit: number): void {
+    private queueBackgroundGeneration(ingredients: string[], limit: number, language: string): void {
         this.backgroundQueue.push({ ingredients, limit });
         this.processBackgroundQueue();
     }
@@ -258,12 +260,14 @@ class RecipeService {
         try {
             while (this.backgroundQueue.length > 0) {
                 const { ingredients, limit } = this.backgroundQueue.shift()!;
+                const language = i18n.language; // Get current language for background generation
 
                 console.log('Background generating recipes for:', ingredients.slice(0, 3));
-                await this.getAIGeneratedRecipes(ingredients, limit);
+                await this.getAIGeneratedRecipes(ingredients, limit, false, language); // Pass false for isExpiringSoon
 
-                // Small delay to avoid overwhelming the API
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // Longer delay to avoid overwhelming the API and prevent rate limiting
+                const delay = __DEV__ ? 3000 : 2000; // 3 seconds in dev, 2 seconds in production
+                await new Promise(resolve => setTimeout(resolve, delay));
             }
         } catch (error) {
             console.warn('Background generation failed:', error);
@@ -276,16 +280,30 @@ class RecipeService {
      * Apply translations if needed (extracted for reuse)
      */
     private async applyTranslationsIfNeeded(recipes: Recipe[]): Promise<Recipe[]> {
-        if (i18n.language === 'es') {
-            return Promise.all(recipes.map((r: Recipe) => translationService.translateRecipe(r, 'es')));
+        // No translation needed if the language is English
+        if (i18n.language === 'en') {
+            return recipes;
         }
-        return recipes;
+
+        // Only translate default recipes (ID range 1000-1999)
+        const recipesToTranslate = recipes.filter(r => r.id >= 1000 && r.id < 2000);
+        const otherRecipes = recipes.filter(r => r.id < 1000 || r.id >= 2000);
+
+        if (recipesToTranslate.length === 0) {
+            return recipes; // No default recipes to translate
+        }
+
+        const translated = await Promise.all(
+            recipesToTranslate.map(r => translationService.translateRecipe(r, i18n.language as 'es'))
+        );
+
+        return [...translated, ...otherRecipes];
     }
 
     /**
      * Get default recipes for users without inventory items
      */
-    private getDefaultRecipesForUser(limit: number): Recipe[] {
+    private async getDefaultRecipesForUser(limit: number): Promise<Recipe[]> {
         // Get a mix of recipes across different meal times
         const currentHour = new Date().getHours();
         let mealTime = 'dinner'; // Default
@@ -308,7 +326,10 @@ class RecipeService {
             index === self.findIndex(r => r.id === recipe.id)
         );
 
-        return uniqueRecipes.slice(0, limit);
+        const recipes = uniqueRecipes.slice(0, limit);
+
+        // Apply translations if needed
+        return this.applyTranslationsIfNeeded(recipes);
     }
 
     /**
@@ -320,12 +341,7 @@ class RecipeService {
             // In the future, we could implement AI-powered recipe search
             const results = defaultRecipeLoader.searchDefaultRecipes(query, limit);
 
-            // Apply translations if language is Spanish
-            if (i18n.language === 'es') {
-                return Promise.all(results.map((r: Recipe) => translationService.translateRecipe(r, 'es')));
-            }
-
-            return results;
+            return this.applyTranslationsIfNeeded(results);
         } catch (error) {
             console.error('Error searching recipes:', error);
             return [];
@@ -336,6 +352,13 @@ class RecipeService {
      * Prefetch recipes for common ingredient combinations
      */
     async prefetchCommonRecipes(): Promise<void> {
+        // Reduce API calls in development
+        const isDevelopment = __DEV__;
+        if (isDevelopment) {
+            console.log('Skipping common recipe prefetch in development to reduce API calls');
+            return;
+        }
+
         const commonCombinations = [
             ['chicken', 'rice', 'vegetables'],
             ['pasta', 'tomato', 'cheese'],
@@ -347,7 +370,7 @@ class RecipeService {
         console.log('Prefetching common recipe combinations...');
 
         for (const ingredients of commonCombinations) {
-            this.queueBackgroundGeneration(ingredients, 5);
+            this.queueBackgroundGeneration(ingredients, 5, i18n.language); // Pass current language
         }
     }
 
@@ -366,6 +389,23 @@ class RecipeService {
         }
 
         console.log('All recipe caches cleared');
+    }
+
+    /**
+     * Clear cache when language changes to ensure fresh recipes in new language
+     */
+    async clearCacheForLanguageChange(): Promise<void> {
+        // Only clear recipe cache, keep individual recipe cache for bulk retrieval
+        this.recipeCache.clear();
+        this.cacheExpiry.clear();
+
+        try {
+            await AsyncStorage.removeItem(this.PERSISTENT_CACHE_KEY);
+        } catch (error) {
+            console.warn('Failed to clear persistent cache for language change:', error);
+        }
+
+        console.log('Recipe cache cleared for language change');
     }
 
     /**

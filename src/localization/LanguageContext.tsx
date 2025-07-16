@@ -1,5 +1,6 @@
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { recipeService } from '../services/RecipeService';
 import { storeLanguage } from './i18n';
 // expo-localization already handles device locale; react-native-localize not needed
 
@@ -49,6 +50,9 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
             await i18n.changeLanguage(language);
             await storeLanguage(language);
             setCurrentLanguage(language);
+
+            // Clear recipe cache to ensure fresh recipes are generated in the new language
+            await recipeService.clearCacheForLanguageChange();
 
             console.log(`Language changed to: ${language}`);
         } catch (error) {

@@ -125,6 +125,7 @@
   "recipes_add_ingredients": "Añade ingredientes para obtener sugerencias de recetas",
   "recipes_sign_in_required": "Por favor inicia sesión para ver recetas",
   "recipes_showing_popular": "Mostrando recetas populares. Añade artículos a tu inventario para sugerencias personalizadas.",
+  "recipes_using_expiring_items": "Usando artículos que expiran pronto para generar recetas personalizadas.",
 
   "recipe_detail_description": "Descripción",
   "recipe_detail_cook_time": "Tiempo de cocción",
@@ -157,6 +158,11 @@
   "recipe_cat_sauce": "Salsa",
   "recipe_cat_condiment": "Condimento",
   "recipe_cat_antipasti": "Antipasti",
+  "recipe_cat_desayuno": "Desayuno",
+  "recipe_cat_ensalada": "Ensalada",
+  "recipe_cat_almuerzo": "Almuerzo",
+  "recipe_cat_cena": "Cena",
+  "recipe_cat_sopa": "Sopa",
 
   "profile_title": "Perfil",
   "profile_recent_activity": "Actividad reciente",

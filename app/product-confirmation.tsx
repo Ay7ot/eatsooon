@@ -353,7 +353,12 @@ export default function ProductConfirmationScreen() {
     };
 
     const handleDatePickerOpen = () => {
-        setTempDate(expiryDate);
+        // If no date is set (using the special NO_DATE_SET value), start with today's date
+        if (expiryDate.getTime() === NO_DATE_SET.getTime()) {
+            setTempDate(new Date());
+        } else {
+            setTempDate(expiryDate);
+        }
         setShowDatePicker(true);
     };
 
@@ -710,6 +715,7 @@ export default function ProductConfirmationScreen() {
                 date={tempDate}
                 mode="date"
                 minimumDate={new Date()}
+                maximumDate={new Date(2099, 11, 31)}
                 onConfirm={(date) => {
                     setExpiryDate(date);
                     setTempDate(date);

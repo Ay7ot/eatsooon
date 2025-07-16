@@ -24,13 +24,14 @@ import {
 
 export default function RecipesScreen() {
     const { user } = useAuth();
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const router = useRouter();
     const [recipes, setRecipes] = useState<Recipe[]>([]);
     const [filteredRecipes, setFilteredRecipes] = useState<Recipe[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [isUsingFallback, setIsUsingFallback] = useState(false);
+    const [isUsingExpiringItems, setIsUsingExpiringItems] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const fetchRecipes = useCallback(async () => {
@@ -40,29 +41,56 @@ export default function RecipesScreen() {
         setError(null);
 
         try {
-            // Get all items from inventory
-            const items: FoodItem[] = await new Promise((resolve) => {
-                const unsubscribe = inventoryService.listenFoodItems((list) => {
-                    unsubscribe();
-                    resolve(list);
-                });
-            });
+            // First, try to get items that are expiring soon (within 3 days)
+            let expiringItems: FoodItem[] = [];
+            try {
+                expiringItems = await inventoryService.getExpiringSoonItems(3);
+                console.log(`Found ${expiringItems.length} items expiring within 3 days`);
+            } catch (error) {
+                console.warn('Error fetching expiring items:', error);
+            }
 
-            let ingredients = items.map(item => item.name);
+            let ingredients: string[] = [];
+            let isUsingExpiringItems = false;
+
+            if (expiringItems.length > 0) {
+                // Use expiring items for recipe generation
+                ingredients = expiringItems.map(item => item.name);
+                isUsingExpiringItems = true;
+                setIsUsingExpiringItems(true);
+                console.log('Using expiring items for recipe generation:', ingredients);
+            } else {
+                // Fallback to all items from inventory
+                const allItems: FoodItem[] = await new Promise((resolve) => {
+                    const unsubscribe = inventoryService.listenFoodItems((list) => {
+                        unsubscribe();
+                        resolve(list);
+                    });
+                });
+
+                ingredients = allItems.map(item => item.name);
+                setIsUsingExpiringItems(false);
+                console.log('No expiring items found, using all inventory items:', ingredients);
+            }
 
             // Fallback ingredients if pantry is empty
             if (ingredients.length === 0) {
                 setIsUsingFallback(true);
                 ingredients = ['Eggs', 'Milk', 'Bread', 'Tomato', 'Onion', 'Garlic', 'Chicken'];
+                console.log('Using fallback ingredients:', ingredients);
             } else {
                 setIsUsingFallback(false);
             }
 
+            // Limit to maximum 15 recipes
+            const recipeLimit = Math.min(15, isUsingExpiringItems ? 15 : 20);
+
             // Fetch recipes by ingredients - this now returns cached results immediately if available
             const basicRecipes = await recipeService.getRecipesByIngredients(
                 ingredients,
-                isUsingFallback ? 10 : 20,
-                true // Use cache for immediate results
+                recipeLimit,
+                true, // Use cache for immediate results
+                isUsingExpiringItems // Pass the expiring items flag
             );
 
             if (basicRecipes.length === 0) {
@@ -99,7 +127,7 @@ export default function RecipesScreen() {
         } finally {
             setIsLoading(false);
         }
-    }, [user, isUsingFallback]);
+    }, [user, i18n.language]);
 
     useEffect(() => {
         fetchRecipes();
@@ -170,6 +198,16 @@ export default function RecipesScreen() {
                 </View>
             )}
 
+            {/* Expiring Items Notice */}
+            {isUsingExpiringItems && !isUsingFallback && (
+                <View style={[styles.fallbackNotice, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}>
+                    <MaterialIcons name="schedule" size={20} color="#D97706" />
+                    <Text style={[styles.fallbackText, { color: '#92400E' }]}>
+                        {t('recipes_using_expiring_items')}
+                    </Text>
+                </View>
+            )}
+
             {/* Content */}
             {isLoading ? (
                 <RecipesSkeleton />
@@ -195,7 +233,7 @@ export default function RecipesScreen() {
                     data={filteredRecipes}
                     renderItem={renderRecipeCard}
                     keyExtractor={(item) => item.id.toString()}
-                    contentContainerStyle={styles.listContainer}
+                    contentContainerStyle={[styles.listContainer, { paddingBottom: 96 }]}
                     showsVerticalScrollIndicator={false}
                 />
             )}
@@ -213,9 +251,41 @@ function RecipeCard({ recipe, onPress, isUsingFallback }: {
 
     // Helper to translate recipe category names
     const translateCategory = (category: string) => {
-        const key = `recipe_cat_${category.toLowerCase().replace(/\s+/g, '_')}`;
-        const translated = t(key);
-        return translated === key ? category : translated;
+        // First try the direct category as a translation key
+        const directKey = `recipe_cat_${category.toLowerCase().replace(/\s+/g, '_')}`;
+        const directTranslation = t(directKey);
+        if (directTranslation !== directKey) {
+            return directTranslation;
+        }
+
+        // If that fails, try to map common Spanish categories to English equivalents
+        const spanishToEnglish: { [key: string]: string } = {
+            'desayuno': 'breakfast',
+            'ensalada': 'salad',
+            'almuerzo': 'lunch',
+            'cena': 'dinner',
+            'postre': 'dessert',
+            'sopa': 'soup',
+            'bebida': 'beverage',
+            'aperitivo': 'appetizer',
+            'snack': 'snack',
+            'general': 'general',
+            'comida_para_picar': 'fingerfood',
+            'marinada': 'marinade',
+            'salsa': 'sauce',
+            'condimento': 'condiment',
+            'antipasti': 'antipasti'
+        };
+
+        const englishCategory = spanishToEnglish[category.toLowerCase()];
+        if (englishCategory) {
+            const englishKey = `recipe_cat_${englishCategory}`;
+            const englishTranslation = t(englishKey);
+            return englishTranslation !== englishKey ? englishTranslation : category;
+        }
+
+        // Fallback to original category if no translation found
+        return category;
     };
 
     // Helper to translate difficulty values
@@ -301,7 +371,7 @@ function RecipeCard({ recipe, onPress, isUsingFallback }: {
 
 function RecipesSkeleton() {
     return (
-        <ScrollView style={styles.listContainer} showsVerticalScrollIndicator={false}>
+        <ScrollView style={[styles.listContainer, { paddingBottom: 96 }]} showsVerticalScrollIndicator={false}>
             {Array.from({ length: 5 }).map((_, idx) => (
                 <View key={idx} style={styles.skeletonCard} />
             ))}
