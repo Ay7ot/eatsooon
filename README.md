@@ -1,50 +1,83 @@
-# Welcome to your Expo app 👋
+# Eatsooon 🥬
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**A smart pantry manager to help you reduce food waste, one meal at a time.**
 
-## Get started
+Eatsooon is a mobile application built with React Native (Expo) that helps you keep track of your food inventory, get recipe suggestions for expiring items, and collaborate with your family to manage your pantry efficiently.
 
-1. Install dependencies
+## ✨ Key Features
 
-   ```bash
-   npm install
-   ```
+-   **🥫 Smart Inventory Management:** Easily add, edit, and track food items in your pantry. See what you have at a glance, with items automatically categorized as fresh, expiring soon, or expired.
+-   **📸 AI-Powered Scanning:** Add items in a snap by scanning barcodes for product information and capturing expiration dates from packaging using your camera.
+-   **👨‍👩‍👧‍👦 Family Sharing:** Create a family group to share a pantry with others. See a shared inventory and a unified activity feed, making it easy to coordinate groceries and meals.
+-   **🍲 Intelligent Recipe Suggestions:** Get creative in the kitchen! Eatsooon suggests recipes based on the ingredients you already have, prioritizing items that are about to expire.
+-   **🔔 Expiration Notifications:** Receive timely reminders for items that are expiring soon, so you can use them before they go to waste.
+-   **📊 Activity Tracking:** Keep an eye on your household's pantry activities with a real-time feed showing who added, used, or removed items.
+-   **🌐 Multi-Language Support:** The app is fully localized and supports multiple languages.
 
-2. Start the app
+## 🚀 Tech Stack
 
-   ```bash
-   npx expo start
-   ```
+-   **Framework:** React Native with Expo
+-   **Backend & Database:** Firebase (Firestore, Authentication, Storage)
+-   **Recipe API:** Spoonacular
+-   **Product Information:** OpenFoodFacts API
+-   **Navigation:** Expo Router
+-   **State Management:** React Context API
+-   **Localization:** i18next
 
-In the output, you'll find options to open the app in a
+## ⚙️ Getting Started
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### Prerequisites
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+-   Node.js (LTS version)
+-   Expo CLI (`npm install -g expo-cli`)
+-   An Expo Go account and the app on your mobile device (for testing).
 
-## Get a fresh project
+### Installation
 
-When you're ready, run:
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/Ay7ot/eatsooon.git
+    cd eatsooon
+    ```
 
-```bash
-npm run reset-project
+2.  **Install dependencies:**
+    This project uses `npx expo install` to ensure library versions are compatible.
+    ```bash
+    npx expo install
+    ```
+
+3.  **Set up Environment Variables:**
+    Create a `.env` file in the root of the project and add your API keys. You can use the example file as a template:
+    ```bash
+    cp .env.example .env
+    ```
+    Your `.env` file should contain:
+    ```
+    SPOONACULAR_API_KEY="YOUR_SPOONACULAR_API_KEY"
+    ```
+
+4.  **Run the application:**
+    ```bash
+    npx expo start
+    ```
+    Scan the QR code with the Expo Go app on your phone.
+
+## 📁 Project Structure
+
 ```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+eatsooon/
+├── app/                  # Expo Router file-based routing (screens)
+│   ├── (auth)/           # Authentication screens (sign-in, sign-up)
+│   └── (tabs)/           # Main app screens after login
+├── assets/               # Static assets like images and fonts
+├── components/           # Shared UI components
+├── constants/            # Constant values (colors, styles)
+├── hooks/                # Custom React hooks
+├── src/                  # Core application logic
+│   ├── components/       # More complex, feature-specific components
+│   ├── services/         # Services for interacting with APIs (Firebase, etc.)
+│   ├── models/           # Data models and types
+│   ├── localization/     # i18n configuration and translations
+│   └── store/            # State management logic
+└── ...
+```
