@@ -231,6 +231,9 @@ export default function RecipesScreen() {
                     <Text style={styles.emptyText}>
                         {searchQuery ? t('recipes_adjust_search') : t('recipes_add_ingredients')}
                     </Text>
+                    <Pressable style={styles.retryButton} onPress={fetchRecipes}>
+                        <Text style={styles.retryButtonText}>{t('recipes_retry')}</Text>
+                    </Pressable>
                 </View>
             ) : (
                 <FlatList
