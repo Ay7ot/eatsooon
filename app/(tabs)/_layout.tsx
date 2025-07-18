@@ -8,11 +8,10 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAuth } from '@/src/services/AuthContext';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Redirect } from 'expo-router';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const { user, isLoading } = useAuth();
+  const { isLoading } = useAuth();
 
   // Show loading spinner while checking auth state
   if (isLoading) {
@@ -23,11 +22,7 @@ export default function TabLayout() {
     );
   }
 
-  // If user is not authenticated, redirect to sign-in
-  if (!user) {
-    return <Redirect href="/(auth)/sign-in" />;
-  }
-
+  // AuthGate handles authentication routing, so we don't need to check here
   return (
     <Tabs
       screenOptions={{

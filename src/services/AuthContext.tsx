@@ -15,21 +15,25 @@ import { auth, db } from './firebase';
 interface AuthContextType {
     user: User | null;
     isLoading: boolean;
+    onboardingCompleted: boolean;
     signIn: (email: string, password: string) => Promise<boolean>;
     signUp: (email: string, password: string, name: string) => Promise<boolean>;
     resetPassword: (email: string) => Promise<boolean>;
     updateUserProfile: (name: string) => Promise<boolean>;
     signOut: () => Promise<void>;
+    completeOnboarding: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
     user: null,
     isLoading: true,
+    onboardingCompleted: false,
     signIn: async () => false,
     signUp: async () => false,
     resetPassword: async () => false,
     updateUserProfile: async () => false,
     signOut: async () => { },
+    completeOnboarding: async () => { },
 });
 
 export const useAuth = () => {
@@ -43,31 +47,36 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [onboardingCompleted, setOnboardingCompleted] = useState<boolean>(false);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             setUser(user);
 
-            // If user is signed in, check if they have families but no current family ID
             if (user) {
                 try {
                     const userDoc = await getDoc(doc(db, 'users', user.uid));
                     if (userDoc.exists()) {
                         const userData = userDoc.data();
+                        setOnboardingCompleted(userData.onboardingCompleted ?? false);
                         const familyIds = userData.familyIds || [];
                         const currentFamilyId = userData.currentFamilyId;
 
-                        // If user has families but no current family ID, set it to the first one
                         if (familyIds.length > 0 && !currentFamilyId) {
                             await updateDoc(doc(db, 'users', user.uid), {
                                 currentFamilyId: familyIds[0]
                             });
                             console.log(`Auto-set current family ID to: ${familyIds[0]} on app start`);
                         }
+                    } else {
+                        setOnboardingCompleted(false);
                     }
                 } catch (error) {
-                    console.error('Error checking user family status on auth state change:', error);
+                    console.error('Error checking user status on auth state change:', error);
+                    setOnboardingCompleted(false);
                 }
+            } else {
+                setOnboardingCompleted(false);
             }
 
             setIsLoading(false);
@@ -83,19 +92,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             // After successful sign in, check if user has families but no current family ID
             const user = auth.currentUser;
             if (user) {
-                const userDoc = await getDoc(doc(db, 'users', user.uid));
-                if (userDoc.exists()) {
-                    const userData = userDoc.data();
-                    const familyIds = userData.familyIds || [];
-                    const currentFamilyId = userData.currentFamilyId;
+                try {
+                    const userDoc = await getDoc(doc(db, 'users', user.uid));
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+                        const familyIds = userData.familyIds || [];
+                        const currentFamilyId = userData.currentFamilyId;
 
-                    // If user has families but no current family ID, set it to the first one
-                    if (familyIds.length > 0 && !currentFamilyId) {
-                        await updateDoc(doc(db, 'users', user.uid), {
-                            currentFamilyId: familyIds[0]
-                        });
-                        console.log(`Auto-set current family ID to: ${familyIds[0]}`);
+                        // If user has families but no current family ID, set it to the first one
+                        if (familyIds.length > 0 && !currentFamilyId) {
+                            await updateDoc(doc(db, 'users', user.uid), {
+                                currentFamilyId: familyIds[0]
+                            });
+                            console.log(`Auto-set current family ID to: ${familyIds[0]}`);
+                        }
                     }
+                } catch (error) {
+                    // Log error but don't fail sign in - user can still use the app
+                    console.error('Error checking family status after sign in:', error);
+                    // Don't return false - sign in was successful
                 }
             }
 
@@ -121,6 +136,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 createdAt: serverTimestamp(),
                 familyIds: [],
                 currentFamilyId: null,
+                onboardingCompleted: false,
             });
 
             return true;
@@ -168,14 +184,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     };
 
+    const completeOnboarding = async () => {
+        if (user) {
+            try {
+                await updateDoc(doc(db, 'users', user.uid), {
+                    onboardingCompleted: true,
+                });
+                setOnboardingCompleted(true);
+            } catch (error) {
+                console.error("Error completing onboarding:", error);
+            }
+        }
+    };
+
     const value = {
         user,
         isLoading,
+        onboardingCompleted,
         signIn,
         signUp,
         resetPassword,
         updateUserProfile,
         signOut,
+        completeOnboarding,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -72,21 +72,14 @@ export default function SignUpScreen() {
         const success = await signUp(email, password, name);
         setIsLoading(false);
 
-        if (success) {
-            setToast({
-                message: t('signup_success'),
-                type: 'success',
-                visible: true,
-            });
-            // Navigate new users to onboarding
-            router.replace('/onboarding');
-        } else {
+        if (!success) {
             setToast({
                 message: t('signup_failed'),
                 type: 'error',
                 visible: true,
             });
         }
+        // Navigation is now handled by AuthGate
     };
 
     return (

@@ -3,23 +3,28 @@ import React, { useEffect } from 'react';
 import { useAuth } from './AuthContext';
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
-    const { user, isLoading } = useAuth();
+    const { user, isLoading, onboardingCompleted } = useAuth();
     const segments = useSegments();
     const router = useRouter();
 
     useEffect(() => {
         if (isLoading) {
-            return; // Don't do anything until loading is complete
+            return;
         }
 
         const inAuthGroup = segments[0] === '(auth)';
+        const inOnboarding = segments[0] === 'onboarding';
 
         if (!user && !inAuthGroup) {
-            // User is not signed in and not on auth screen, redirect to sign-in
-            console.log('AuthGate - No user and not in auth group, redirecting to sign-in');
             router.replace('/(auth)/sign-in');
+        } else if (user) {
+            if (!onboardingCompleted && !inOnboarding) {
+                router.replace('/onboarding');
+            } else if (onboardingCompleted && (inAuthGroup || inOnboarding)) {
+                router.replace('/(tabs)');
+            }
         }
-    }, [user, segments, isLoading, router]);
+    }, [user, onboardingCompleted, segments, isLoading, router]);
 
     return <>{children}</>;
 } 

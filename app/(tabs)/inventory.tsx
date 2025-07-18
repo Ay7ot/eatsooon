@@ -92,8 +92,8 @@ export default function InventoryScreen() {
     // --- RENDERERS --- //
 
     const renderItem = ({ item }: { item: FoodItem }) => (
-        <InventoryItemCard 
-            item={item} 
+        <InventoryItemCard
+            item={item}
             inventoryScope={inventoryScope}
             currentFamilyId={currentFamilyId}
         />

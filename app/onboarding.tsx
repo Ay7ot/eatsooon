@@ -8,7 +8,7 @@ import InventoryScreen from '../src/components/onboarding/screens/InventoryScree
 import LanguageSelectionScreen from '../src/components/onboarding/screens/LanguageSelectionScreen';
 import RecipeScreen from '../src/components/onboarding/screens/RecipeScreen';
 import WelcomeScreen from '../src/components/onboarding/screens/WelcomeScreen';
-import { onboardingService } from '../src/services/OnboardingService';
+import { useAuth } from '../src/services/AuthContext';
 
 const screens = [
     LanguageSelectionScreen,
@@ -22,6 +22,7 @@ const screens = [
 export default function OnboardingPage() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const router = useRouter();
+    const { completeOnboarding } = useAuth();
 
     const handleNext = () => {
         if (currentIndex < screens.length - 1) {
@@ -37,13 +38,13 @@ export default function OnboardingPage() {
         }
     };
 
-    const handleSkip = () => {
-        onboardingService.completeOnboarding();
+    const handleSkip = async () => {
+        await completeOnboarding();
         router.replace('/(tabs)');
     };
 
-    const handleComplete = () => {
-        onboardingService.completeOnboarding();
+    const handleComplete = async () => {
+        await completeOnboarding();
         router.replace('/(tabs)');
     };
 

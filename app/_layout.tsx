@@ -1,6 +1,7 @@
 import { LanguageProvider } from '@/src/localization/LanguageContext';
 import { adMobService } from '@/src/services/AdMobService';
 import { AuthProvider } from '@/src/services/AuthContext';
+import { AuthGate } from '@/src/services/AuthGate';
 import { registerBackgroundTask } from '@/src/services/backgroundTaskService';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -44,12 +45,19 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <LanguageProvider>
         <AuthProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="recipe-detail" options={{ presentation: 'modal' }} />
-          </Stack>
+          <AuthGate>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="recipe-detail" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="product-confirmation" />
+              <Stack.Screen name="family-members" />
+              <Stack.Screen name="inventory-item-detail" />
+              <Stack.Screen name="onboarding" />
+              <Stack.Screen name="edit-profile" />
+            </Stack>
+          </AuthGate>
         </AuthProvider>
       </LanguageProvider>
     </SafeAreaProvider>
