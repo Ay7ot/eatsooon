@@ -53,7 +53,7 @@ class AIRecipeService {
         }).filter(ingredient => ingredient.length > 0);
     }
 
-    async generateRecipes(ingredients: string[], count: number = 10, isExpiringSoon: boolean = false, language: string = 'en'): Promise<Recipe[]> {
+    async generateRecipes(ingredients: string[], count: number = 7, isExpiringSoon: boolean = false, language: string = 'en'): Promise<Recipe[]> {
         if (!process.env.EXPO_PUBLIC_OPENAI_API_KEY) {
             console.warn('OpenAI API key missing. Cannot generate recipes.');
             return [];
@@ -74,7 +74,7 @@ class AIRecipeService {
         console.log('Generating recipes in language:', language);
 
         // Try with the requested count first, then fallback to fewer recipes if needed
-        const attempts = [count, Math.max(3, Math.floor(count / 2))];
+        const attempts = [count, Math.max(3, Math.floor(count * 0.6))];
 
         for (const attemptCount of attempts) {
             try {

@@ -1,18 +1,11 @@
 import { Platform } from 'react-native';
 import mobileAds, {
     AdEventType,
-    InterstitialAd,
-    TestIds
+    InterstitialAd
 } from 'react-native-google-mobile-ads';
 
-// Test Ad Unit IDs (replace with real ones for production)
-const TEST_AD_UNITS = {
-    banner: TestIds.BANNER,
-    interstitial: TestIds.INTERSTITIAL,
-};
-
-// Production Ad Unit IDs (you'll get these from AdMob console)
-const PRODUCTION_AD_UNITS = {
+// Production Ad Unit IDs
+const AD_UNITS = {
     banner: {
         android: 'ca-app-pub-9752685758154877/8024442552',
         ios: 'ca-app-pub-9752685758154877/2388972496'
@@ -25,10 +18,9 @@ const PRODUCTION_AD_UNITS = {
 
 // Helper function to get the correct ad unit ID
 const getAdUnitId = (type: 'banner' | 'interstitial'): string => {
-    if (__DEV__) {
-        return TEST_AD_UNITS[type];
-    }
-    return Platform.OS === 'ios' ? PRODUCTION_AD_UNITS[type].ios : PRODUCTION_AD_UNITS[type].android;
+    const adUnitId = Platform.OS === 'ios' ? AD_UNITS[type].ios : AD_UNITS[type].android;
+    console.log(`Using production ad unit for ${type}: ${adUnitId}`);
+    return adUnitId;
 };
 
 class AdMobService {
@@ -53,6 +45,7 @@ class AdMobService {
         if (this.isInitialized) return;
 
         try {
+            console.log('Initializing AdMob...');
             await mobileAds().initialize();
             this.isInitialized = true;
             console.log('AdMob initialized successfully');
@@ -61,6 +54,7 @@ class AdMobService {
             this.loadInterstitialAd();
         } catch (error) {
             console.error('Failed to initialize AdMob:', error);
+            // Don't throw - let the app continue without ads
         }
     }
 

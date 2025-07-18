@@ -4,21 +4,21 @@ This guide explains how to set up AdMob for revenue generation in the Eatsooon a
 
 ## Current Implementation
 
-The app currently uses **test ad unit IDs** for development. Before releasing to production, you need to replace these with real ad unit IDs from your AdMob console.
+The app uses **production ad unit IDs** for both development and production environments. This ensures consistent behavior across all builds.
 
 ## Ad Types Implemented
 
 ### 1. Banner Ads
 - **Location**: Home screen (bottom)
 - **Component**: `BannerAdComponent`
-- **Test ID**: `ca-app-pub-3940256099942544/6300978111`
+- **Production ID**: `ca-app-pub-9752685758154877/2388972496` (iOS) / `ca-app-pub-9752685758154877/8024442552` (Android)
 
 ### 2. Interstitial Ads
 - **Triggers**: 
   - Recipe viewing (30% chance)
   - Item added to inventory (30% chance)
 - **Service**: `AdMobService.showInterstitialAdOnTrigger()`
-- **Test ID**: `ca-app-pub-3940256099942544/1033173712`
+- **Production ID**: `ca-app-pub-9752685758154877/4519262061` (iOS) / `ca-app-pub-9752685758154877/7843429405` (Android)
 
 ### 3. Rewarded Ads (Ready for implementation)
 - **Service**: `AdMobService.showRewardedAd()`
@@ -44,41 +44,42 @@ The app currently uses **test ad unit IDs** for development. Before releasing to
    - **Interstitial Ad Unit** (for recipe/item actions)
    - **Rewarded Ad Unit** (for future features)
 
-### Step 4: Update Configuration
+### Step 4: Configuration (Already Complete)
 
-#### Update app.json
-Replace the test app IDs with your real ones:
+The app is already configured with production ad unit IDs:
 
+#### app.json Configuration
 ```json
 [
   "react-native-google-mobile-ads",
   {
-    "android": {
-      "appId": "ca-app-pub-YOUR_ANDROID_APP_ID"
-    },
-    "ios": {
-      "appId": "ca-app-pub-YOUR_IOS_APP_ID"
-    }
+    "androidAppId": "ca-app-pub-9752685758154877~3533483450",
+    "iosAppId": "ca-app-pub-9752685758154877~1842177589"
   }
 ]
 ```
 
-#### Update AdMobService.ts
-Replace the test ad unit IDs with your real ones:
-
+#### AdMobService.ts Configuration
 ```typescript
-const PRODUCTION_AD_UNITS = {
-    banner: 'ca-app-pub-YOUR_BANNER_AD_UNIT_ID',
-    interstitial: 'ca-app-pub-YOUR_INTERSTITIAL_AD_UNIT_ID',
-    rewarded: 'ca-app-pub-YOUR_REWARDED_AD_UNIT_ID',
+const AD_UNITS = {
+    banner: {
+        android: 'ca-app-pub-9752685758154877/8024442552',
+        ios: 'ca-app-pub-9752685758154877/2388972496'
+    },
+    interstitial: {
+        android: 'ca-app-pub-9752685758154877/7843429405',
+        ios: 'ca-app-pub-9752685758154877/4519262061'
+    },
 };
 ```
 
-### Step 5: Rebuild the App
+### Step 5: Build and Test
 ```bash
 npx expo prebuild --clean
 npx expo run:ios  # or run:android
 ```
+
+The app is now configured to use production ads in both development and production environments.
 
 ## Best Practices
 
@@ -142,8 +143,8 @@ npx expo run:ios  # or run:android
 2. **App crashes**: Verify app IDs are correct
 3. **Low fill rate**: Check ad unit configuration and targeting
 
-### Debug Mode
-The app automatically uses test ads in development mode (`__DEV__`). In production builds, it will use real ad units.
+### Production Mode
+The app uses production ad units in both development and production environments for consistent behavior and testing.
 
 ## Next Steps
 

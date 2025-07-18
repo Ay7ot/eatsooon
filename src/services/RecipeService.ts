@@ -91,7 +91,7 @@ class RecipeService {
      */
     async getRecipesByIngredients(
         ingredients: string[],
-        limit: number = 20,
+        limit: number = 7,
         useCache: boolean = true,
         isExpiringSoon: boolean = false
     ): Promise<Recipe[]> {

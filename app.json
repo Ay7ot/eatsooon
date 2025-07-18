@@ -13,7 +13,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.miqui.eatsooon",
       "appleTeamId": "88NCV6QJ5S",
-      "buildNumber": "8",
+      "buildNumber": "9",
       "infoPlist": {
         "UIBackgroundModes": ["fetch", "processing"],
         "ITSAppUsesNonExemptEncryption": false
@@ -27,7 +27,7 @@
       "edgeToEdgeEnabled": true,
       "permissions": ["android.permission.CAMERA"],
       "package": "com.miqui.eatsooon",
-      "versionCode": 8,
+      "versionCode": 9,
       "privacyPolicy": "https://miqui.com/privacy-policy"
     },
     "web": {

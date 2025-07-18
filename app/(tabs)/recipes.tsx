@@ -83,8 +83,8 @@ export default function RecipesScreen() {
                 setIsUsingFallback(false);
             }
 
-            // Limit to maximum 15 recipes
-            const recipeLimit = Math.min(15, isUsingExpiringItems ? 15 : 20);
+            // Start with 7 recipes, then fallback to fewer if needed
+            const recipeLimit = Math.min(7, isUsingExpiringItems ? 7 : 10);
 
             // Fetch recipes by ingredients - this now returns cached results immediately if available
             const basicRecipes = await recipeService.getRecipesByIngredients(
