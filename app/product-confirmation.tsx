@@ -1,5 +1,6 @@
 import CustomAppBar from '@/components/ui/CustomAppBar';
 import { Colors } from '@/constants/Colors';
+import { adMobService } from '@/src/services/AdMobService';
 import { familyService } from '@/src/services/FamilyService';
 import { inventoryService } from '@/src/services/InventoryService';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -259,6 +260,9 @@ export default function ProductConfirmationScreen() {
                 imageUrl: productImageUrl || undefined,
                 familyId: familyId,
             });
+
+            // Show interstitial ad occasionally after successful item addition
+            await adMobService.showInterstitialAdOnTrigger('item_added');
 
             setShowAlert({
                 visible: true,

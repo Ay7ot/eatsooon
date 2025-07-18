@@ -2,6 +2,7 @@ import CustomAppBar from '@/components/ui/CustomAppBar';
 import FamilySwitcher from '@/components/ui/FamilySwitcher';
 import { Colors } from '@/constants/Colors';
 import RecentActivity from '@/src/components/RecentActivity';
+import BannerAdComponent from '@/src/components/ui/BannerAdComponent';
 import { useAppInventory } from '@/src/hooks/useAppInventory';
 import { FamilyMember } from '@/src/models/FamilyModel';
 import { useAuth } from '@/src/services/AuthContext';
@@ -10,7 +11,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 type InventoryScope = 'user' | 'family';
 
@@ -215,6 +216,11 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* Banner Ad */}
+        <View style={styles.bannerAdContainer}>
+          <BannerAdComponent />
+        </View>
+
         {/* Bottom padding for tab bar */}
         <View style={{ height: 96 }} />
       </ScrollView>
@@ -243,6 +249,10 @@ const styles = StyleSheet.create({
   section: {
     paddingHorizontal: 20,
     marginBottom: 32,
+  },
+  bannerAdContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
   pantryTitle: {
     fontSize: 18,

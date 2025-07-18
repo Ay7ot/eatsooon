@@ -43,7 +43,11 @@
       </dict>
     </array>
     <key>CFBundleVersion</key>
-    <string>6</string>
+    <string>8</string>
+    <key>GADApplicationIdentifier</key>
+    <string>ca-app-pub-9752685758154877~1842177589</string>
+    <key>GADDelayAppMeasurementInit</key>
+    <false/>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>LSMinimumSystemVersion</key>

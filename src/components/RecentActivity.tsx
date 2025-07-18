@@ -95,16 +95,21 @@ function ActivitySkeleton({ count }: { count: number }) {
 function ActivityItem({ activity }: { activity: ActivityModel }) {
     const { t } = useTranslation();
     const color = activityColorValue(activity.type);
+    const [imageError, setImageError] = useState(false);
 
     const { title, subtitle } = localizeActivity(activity, t);
     return (
         <View style={styles.itemContainer}>
             <View style={[styles.iconContainer, { borderColor: color + '1A' }]}>
-                {activity.imageUrl ? (
+                {activity.imageUrl && !imageError ? (
                     <Image
                         source={{ uri: activity.imageUrl }}
                         style={styles.imageThumb}
                         resizeMode="cover"
+                        onError={() => {
+                            console.log('Failed to load activity image:', activity.imageUrl);
+                            setImageError(true);
+                        }}
                     />
                 ) : (
                     <LinearGradient

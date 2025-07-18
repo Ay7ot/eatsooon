@@ -3,6 +3,7 @@ import { Colors } from '@/constants/Colors';
 import { FoodItem } from '@/src/models/FoodItem';
 import { Recipe, getCategoryColor } from '@/src/models/RecipeModel';
 import { activityService } from '@/src/services/ActivityService';
+import { adMobService } from '@/src/services/AdMobService';
 import { useAuth } from '@/src/services/AuthContext';
 import { inventoryService } from '@/src/services/InventoryService';
 import { recipeService } from '@/src/services/RecipeService';
@@ -141,9 +142,12 @@ export default function RecipesScreen() {
         setFilteredRecipes(filtered);
     }, [searchQuery, recipes]);
 
-    const handleRecipePress = (recipe: Recipe) => {
+    const handleRecipePress = async (recipe: Recipe) => {
         // Log activity
         activityService.logRecipeViewed(recipe.title, recipe.imageUrl);
+
+        // Show interstitial ad occasionally
+        await adMobService.showInterstitialAdOnTrigger('recipe_view');
 
         // Navigate to recipe detail
         router.push({

@@ -115,16 +115,45 @@ class ScannerService {
 
         // Keywords and patterns to look for. Ordered by priority.
         const datePatterns = [
-            // With keywords: EXP 12/25, BEST BY 2025-12-31
-            /(?:EXP|BB|BEST BY|BEST BEFORE|USE BY)[:\s.]*(\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4})/gi,
-            /(?:EXP|BB|BEST BY|BEST BEFORE|USE BY)[:\s.]*(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{2,4})/gi,
-            /(?:EXP|BB|BEST BY|BEST BEFORE|USE BY)[:\s.]*((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{2,4})/gi,
+            // With keywords: EXP 12/25, BEST BY 2025-12-31, etc.
+            // Added Spanish keywords like CAD, VENCE
+            /(?:EXP|BB|BEST BY|BEST BEFORE|USE BY|CONSUMIR PREF|CAD|VENCE|FECHA DE VENCIMIENTO)[:\s.]*(\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4})/gi,
+            /(?:EXP|BB|BEST BY|BEST BEFORE|USE BY|CONSUMIR PREF|CAD|VENCE|FECHA DE VENCIMIENTO)[:\s.]*(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Ene|Feb|Mar|Abr|May|Jun|Jul|Ago|Sep|Oct|Nov|Dic)\s+\d{2,4})/gi,
+            /(?:EXP|BB|BEST BY|BEST BEFORE|USE BY|CONSUMIR PREF|CAD|VENCE|FECHA DE VENCIMIENTO)[:\s.]*((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Ene|Feb|Mar|Abr|May|Jun|Jul|Ago|Sep|Oct|Nov|Dic)\s+\d{1,2},?\s+\d{2,4})/gi,
 
-            // Standalone dates
-            /\b\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4}\b/g, // MM/DD/YYYY, MM-DD-YYYY
-            /\b\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{2,4}\b/gi, // DD MMM YYYY
-            /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{2,4}\b/gi, // MMM DD, YYYY
-            /\b\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}\b/g, // YYYY/MM/DD
+            // Standalone dates (most specific first to avoid ambiguity)
+            /\b\d{4}[/\-.]\d{1,2}[/\-.]\d{1,2}\b/g, // YYYY-MM-DD
+            /\b\d{1,2}[/\-.]\d{1,2}[/\-.]\d{4}\b/g, // DD-MM-YYYY
+            /\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Ene|Feb|Mar|Abr|May|Jun|Jul|Ago|Sep|Oct|Nov|Dic)\s+\d{2,4}\b/gi, // 17 JUN 2025
+            /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Ene|Feb|Mar|Abr|May|Jun|Jul|Ago|Sep|Oct|Nov|Dic)\s+\d{1,2},?\s+\d{2,4}\b/gi, // JUN 17, 2025
+            /\b\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2}\b/g, // DD/MM/YY
+
+            // Month and Year only
+            /\b(0[1-9]|1[0-2])[/\-.](\d{4}|\d{2})\b/g, // MM/YYYY or MM/YY
+
+            // Dates without separators (6 or 8 digits)
+            /\b(20\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\b/g, // YYYYMMDD (e.g., 20251007)
+            /\b(0[1-9]|[12]\d|3[01])(0[1-9]|1[0-2])(\d{4}|\d{2})\b/g,    // DDMMYYYY or DDMMYY
+
+            // Additional formats
+            // European format with dots
+            /\b\d{1,2}\.\d{1,2}\.\d{2,4}\b/g, // DD.MM.YYYY or DD.MM.YY
+
+            // Military/Industrial format (YY-MM-DD)
+            /\b\d{2}-\d{2}-\d{2}\b/g, // YY-MM-DD
+
+            // Full month names
+            /\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December|Enero|Febrero|Marzo|Abril|Mayo|Junio|Julio|Agosto|Septiembre|Octubre|Noviembre|Diciembre)\s+\d{2,4}\b/gi,
+            /\b(?:January|February|March|April|May|June|July|August|September|October|November|December|Enero|Febrero|Marzo|Abril|Mayo|Junio|Julio|Agosto|Septiembre|Octubre|Noviembre|Diciembre)\s+\d{1,2},?\s+\d{2,4}\b/gi,
+
+            // ISO 8601 format (with time)
+            /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/g, // YYYY-MM-DDTHH:MM:SS
+
+            // Roman numerals (uncommon but exists)
+            /\b(?:I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\b/g, // MM/DD/YYYY with Roman months
+
+            // Reverse formats
+            /\b\d{2}[\/\-\.]\d{2}[\/\-\.]\d{4}\b/g, // MM/DD/YYYY (2-digit month/day)
         ];
 
         datePatterns.forEach(pattern => {
@@ -166,18 +195,48 @@ class ScannerService {
     // Helper to try multiple parsing formats
     private tryParseDate(dateString: string): Date | null {
         const now = new Date();
+
+        // Pre-process date string to handle special cases
+        const processedDateString = this.preprocessDateString(dateString);
+
         const formats = [
-            'MM/dd/yy', 'M/d/yy', 'MM/dd/yyyy', 'M/d/yyyy',
-            'dd-MM-yy', 'd-M-yy', 'dd-MM-yyyy', 'd-M-yyyy',
-            'dd.MM.yy', 'd.M.yy', 'dd.MM.yyyy', 'd.M.yyyy',
+            // Prioritize day-first formats
+            'dd/MM/yy', 'd/M/yy',
+            'dd-MM-yy', 'd-M-yy',
+            'dd.MM.yy', 'd.M.yy',
+            'dd/MM/yyyy', 'd/M/yyyy',
+            'dd-MM-yyyy', 'd-M-yyyy',
+            'dd.MM.yyyy', 'd.M.yyyy',
+
+            // Month-first formats
+            'MM/dd/yy', 'M/d/yy',
+            'MM/dd/yyyy', 'M/d/yyyy',
+
+            // Year-first format
             'yyyy-MM-dd',
+
+            // Formats with month names (English and Spanish)
             'dd MMM yyyy', 'd MMM yyyy',
             'MMM dd yyyy', 'MMM d yyyy',
+            'dd LLL yyyy', 'd LLL yyyy', // For Spanish month abbreviations
+            'LLL dd yyyy', 'LLL d yyyy',
+
+            // Compact formats (no separators)
+            'yyyyMMdd',
+            'ddMMyyyy',
+            'ddMMyy',
+
+            // Additional formats
+            'dd.MM.yyyy', 'd.M.yyyy', // European format
+            'dd.MM.yy', 'd.M.yy',
+            'yy-MM-dd', // Military format
+            'yyyy-MM-dd\'T\'HH:mm:ss', // ISO 8601
+            'MM/dd/yyyy', 'M/d/yyyy', // 2-digit month/day
         ];
 
         for (const format of formats) {
             try {
-                const parsed = parse(dateString, format, new Date());
+                const parsed = parse(processedDateString, format, new Date());
                 if (isValid(parsed)) {
                     // Handle 2-digit year ambiguity (e.g., '25' -> 2025)
                     if (dateString.match(/\b\d{2}$/)) {
@@ -192,6 +251,36 @@ class ScannerService {
             } catch (e) { /* ignore */ }
         }
         return null;
+    }
+
+    // Pre-process date string to handle special cases
+    private preprocessDateString(dateString: string): string {
+        let processed = dateString.trim();
+
+        // Handle Spanish month abbreviations
+        const spanishMonths: { [key: string]: string } = {
+            'ene': 'Jan', 'feb': 'Feb', 'mar': 'Mar', 'abr': 'Apr',
+            'may': 'May', 'jun': 'Jun', 'jul': 'Jul', 'ago': 'Aug',
+            'sep': 'Sep', 'oct': 'Oct', 'nov': 'Nov', 'dic': 'Dec'
+        };
+
+        // Handle Roman numerals for months
+        const romanMonths: { [key: string]: string } = {
+            'I': '01', 'II': '02', 'III': '03', 'IV': '04', 'V': '05', 'VI': '06',
+            'VII': '07', 'VIII': '08', 'IX': '09', 'X': '10', 'XI': '11', 'XII': '12'
+        };
+
+        // Replace Spanish month abbreviations
+        for (const [spanish, english] of Object.entries(spanishMonths)) {
+            processed = processed.replace(new RegExp(spanish, 'gi'), english);
+        }
+
+        // Replace Roman numerals
+        for (const [roman, arabic] of Object.entries(romanMonths)) {
+            processed = processed.replace(new RegExp(`\\b${roman}\\b`, 'gi'), arabic);
+        }
+
+        return processed;
     }
 
     // Recognize text from an image using Expo 9s TextRecognition module
