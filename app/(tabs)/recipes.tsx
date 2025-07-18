@@ -1,5 +1,6 @@
 import CustomAppBar from '@/components/ui/CustomAppBar';
 import { Colors } from '@/constants/Colors';
+import RecipeImage from '@/src/components/ui/RecipeImage';
 import { FoodItem } from '@/src/models/FoodItem';
 import { Recipe, getCategoryColor } from '@/src/models/RecipeModel';
 import { activityService } from '@/src/services/ActivityService';
@@ -14,7 +15,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     FlatList,
-    Image,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -309,10 +309,12 @@ function RecipeCard({ recipe, onPress, isUsingFallback }: {
         <Pressable style={[styles.recipeCard, { borderColor: categoryColor + '80' }]} onPress={onPress}>
             {/* Image */}
             <View style={styles.imageContainer}>
-                <Image
-                    source={{ uri: recipe.imageUrl }}
+                <RecipeImage
+                    imageUrl={recipe.imageUrl}
                     style={styles.recipeImage}
-                    resizeMode="cover"
+                    containerStyle={styles.recipeImage}
+                    fallbackIcon="restaurant-outline"
+                    fallbackColor="#6B7280"
                 />
                 <LinearGradient
                     colors={['transparent', 'rgba(0,0,0,0.6)']}

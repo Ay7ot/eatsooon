@@ -35,6 +35,7 @@ class AdMobService {
     private static _instance: AdMobService;
     private interstitialAd: InterstitialAd | null = null;
     private isInitialized = false;
+    private isAdLoaded = false;
 
     static get instance() {
         if (!AdMobService._instance) {
@@ -46,8 +47,8 @@ class AdMobService {
     private constructor() { }
 
     /**
-     * Initialize AdMob SDK
-     */
+ * Initialize AdMob SDK
+ */
     async initialize(): Promise<void> {
         if (this.isInitialized) return;
 
@@ -91,6 +92,7 @@ class AdMobService {
                 AdEventType.LOADED,
                 () => {
                     console.log('Interstitial ad loaded successfully');
+                    this.isAdLoaded = true;
                 }
             );
 
@@ -99,6 +101,7 @@ class AdMobService {
                 (error) => {
                     console.error('Interstitial ad failed to load:', error);
                     this.interstitialAd = null;
+                    this.isAdLoaded = false;
                 }
             );
 
@@ -107,16 +110,19 @@ class AdMobService {
                 () => {
                     console.log('Interstitial ad closed');
                     this.interstitialAd = null;
+                    this.isAdLoaded = false;
                     // Load next ad in background
                     setTimeout(() => this.loadInterstitialAd(), 1000);
                 }
             );
 
             console.log('Loading interstitial ad...');
+            this.isAdLoaded = false;
             await this.interstitialAd.load();
         } catch (error) {
             console.error('Failed to load interstitial ad:', error);
             this.interstitialAd = null;
+            this.isAdLoaded = false;
         }
     }
 
@@ -124,59 +130,56 @@ class AdMobService {
      * Show interstitial ad
      */
     async showInterstitialAd(): Promise<boolean> {
-        if (!this.interstitialAd) {
-            console.log('No interstitial ad available, loading one...');
-            await this.loadInterstitialAd();
-            // Wait a bit for the ad to load
-            await new Promise(resolve => setTimeout(resolve, 2000));
+        if (!this.interstitialAd || !this.isAdLoaded) {
+            console.log('No interstitial ad available or not loaded yet');
+            return false;
         }
 
-        if (this.interstitialAd) {
-            try {
-                console.log('Attempting to show interstitial ad...');
-                await this.interstitialAd.show();
-                console.log('Interstitial ad shown successfully');
-                return true;
-            } catch (error) {
-                console.error('Failed to show interstitial ad:', error);
-                this.interstitialAd = null;
-                return false;
-            }
-        } else {
-            console.log('Interstitial ad still not available after loading attempt');
+        try {
+            console.log('Attempting to show interstitial ad...');
+            await this.interstitialAd.show();
+            console.log('Interstitial ad shown successfully');
+            this.isAdLoaded = false; // Mark as used
+            return true;
+        } catch (error) {
+            console.error('Failed to show interstitial ad:', error);
+            this.interstitialAd = null;
+            this.isAdLoaded = false;
             return false;
         }
     }
 
     /**
-     * Show interstitial ad with specific triggers
-     */
+ * Show interstitial ad with specific triggers
+ */
     async showInterstitialAdOnTrigger(trigger: 'recipe_view' | 'scan_complete' | 'item_added'): Promise<void> {
-        // For testing, show ads more frequently
-        const shouldShowAd = __DEV__ ? Math.random() < 0.8 : Math.random() < 0.3; // 80% chance in dev, 30% in production
+        // Only show ads 30% of the time (or 80% in dev for testing)
+        const shouldShowAd = __DEV__ ? Math.random() < 0.8 : Math.random() < 0.3;
 
         if (shouldShowAd) {
             console.log(`Attempting to show interstitial ad for trigger: ${trigger}`);
 
-            // First try to load a new ad if none is loaded
+            // Check if we have a loaded ad ready
             if (!this.interstitialAd) {
-                console.log('No interstitial ad loaded, loading new one...');
+                console.log('No ad available, loading one...');
                 await this.loadInterstitialAd();
+                // Wait for the ad to load
+                await new Promise(resolve => setTimeout(resolve, 3000));
             }
 
-            // Then try to show it
             const success = await this.showInterstitialAd();
+
             if (success) {
                 console.log(`Successfully showed interstitial ad for trigger: ${trigger}`);
-                // Load the next ad in the background
-                this.loadInterstitialAd();
+                // Load the next ad in the background for future use
+                setTimeout(() => this.loadInterstitialAd(), 1000);
             } else {
-                console.log(`Failed to show interstitial ad for trigger: ${trigger}, will try to load new ad`);
+                console.log(`Failed to show interstitial ad for trigger: ${trigger}`);
                 // Try to load a new ad for next time
-                this.loadInterstitialAd();
+                setTimeout(() => this.loadInterstitialAd(), 1000);
             }
         } else {
-            console.log(`Skipping interstitial ad for trigger: ${trigger}`);
+            console.log(`Skipping interstitial ad for trigger: ${trigger} (${__DEV__ ? '80%' : '30%'} chance)`);
         }
     }
 }

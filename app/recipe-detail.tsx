@@ -1,4 +1,5 @@
 import { Colors } from '@/constants/Colors';
+import RecipeImage from '@/src/components/ui/RecipeImage';
 import { Recipe, getCategoryColor, getEmojiForIngredient } from '@/src/models/RecipeModel';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,7 +7,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Image,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -97,10 +97,12 @@ export default function RecipeDetailScreen() {
             <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
                 {/* Hero Image */}
                 <View style={styles.heroImageContainer}>
-                    <Image
-                        source={{ uri: recipe.imageUrl }}
+                    <RecipeImage
+                        imageUrl={recipe.imageUrl}
                         style={styles.heroImage}
-                        resizeMode="cover"
+                        containerStyle={styles.heroImage}
+                        fallbackIcon="restaurant-outline"
+                        fallbackColor="#6B7280"
                     />
                     <LinearGradient
                         colors={['transparent', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.3)']}
