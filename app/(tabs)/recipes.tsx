@@ -41,6 +41,9 @@ export default function RecipesScreen() {
         setIsLoading(true);
         setError(null);
 
+        // Show ad while loading
+        adMobService.showInterstitialAdOnTrigger('recipe_loading');
+
         try {
             // First, try to get items that are expiring soon (within 3 days)
             let expiringItems: FoodItem[] = [];

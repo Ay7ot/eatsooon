@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { useAuth } from './AuthContext';
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
-    const { user, isLoading, onboardingCompleted } = useAuth();
+    const { user, isLoading, onboardingCompleted, isNewUser } = useAuth();
     const segments = useSegments();
     const router = useRouter();
 
@@ -18,13 +18,19 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         if (!user && !inAuthGroup) {
             router.replace('/(auth)/sign-in');
         } else if (user) {
-            if (!onboardingCompleted && !inOnboarding) {
+            if (isNewUser && !onboardingCompleted && !inOnboarding) {
                 router.replace('/onboarding');
+            } else if (!isNewUser && onboardingCompleted && (inAuthGroup || inOnboarding)) {
+                router.replace('/(tabs)');
+            } else if (!isNewUser && !onboardingCompleted && (inAuthGroup || inOnboarding)) {
+                // This is for existing users who haven't finished onboarding for some reason.
+                // We can decide to send them to onboarding or home. For now, home.
+                router.replace('/(tabs)');
             } else if (onboardingCompleted && (inAuthGroup || inOnboarding)) {
                 router.replace('/(tabs)');
             }
         }
-    }, [user, onboardingCompleted, segments, isLoading, router]);
+    }, [user, onboardingCompleted, segments, isLoading, router, isNewUser]);
 
     return <>{children}</>;
 } 

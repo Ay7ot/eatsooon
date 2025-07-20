@@ -146,7 +146,7 @@ class AdMobService {
     /**
  * Show interstitial ad with specific triggers
  */
-    async showInterstitialAdOnTrigger(trigger: 'recipe_view' | 'scan_complete' | 'item_added'): Promise<void> {
+    async showInterstitialAdOnTrigger(trigger: 'recipe_view' | 'scan_complete' | 'item_added' | 'recipe_loading'): Promise<void> {
         // Only show ads 30% of the time (or 80% in dev for testing)
         const shouldShowAd = __DEV__ ? Math.random() < 0.8 : Math.random() < 0.3;
 

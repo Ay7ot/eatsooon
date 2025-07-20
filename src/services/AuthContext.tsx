@@ -16,6 +16,7 @@ interface AuthContextType {
     user: User | null;
     isLoading: boolean;
     onboardingCompleted: boolean;
+    isNewUser: boolean; // Add this
     signIn: (email: string, password: string) => Promise<boolean>;
     signUp: (email: string, password: string, name: string) => Promise<boolean>;
     resetPassword: (email: string) => Promise<boolean>;
@@ -28,6 +29,7 @@ const AuthContext = createContext<AuthContextType>({
     user: null,
     isLoading: true,
     onboardingCompleted: false,
+    isNewUser: false, // Add this
     signIn: async () => false,
     signUp: async () => false,
     resetPassword: async () => false,
@@ -48,6 +50,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [onboardingCompleted, setOnboardingCompleted] = useState<boolean>(false);
+    const [isNewUser, setIsNewUser] = useState<boolean>(false); // Add this
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -87,6 +90,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const signIn = async (email: string, password: string) => {
         try {
+            setIsNewUser(false); // User is signing in, not new
             await signInWithEmailAndPassword(auth, email, password);
 
             // After successful sign in, check if user has families but no current family ID
@@ -123,6 +127,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const signUp = async (email: string, password: string, name: string) => {
         try {
+            setIsNewUser(true); // User is signing up, so they are new
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             await updateProfile(userCredential.user, {
                 displayName: name,
@@ -201,6 +206,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         user,
         isLoading,
         onboardingCompleted,
+        isNewUser, // Add this
         signIn,
         signUp,
         resetPassword,
