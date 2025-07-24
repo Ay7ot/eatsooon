@@ -3,6 +3,7 @@ import { Colors } from '@/constants/Colors';
 import { adMobService } from '@/src/services/AdMobService';
 import { familyService } from '@/src/services/FamilyService';
 import { inventoryService } from '@/src/services/InventoryService';
+import { notificationService } from '@/src/services/notifications/NotificationService';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { isValid, parse } from 'date-fns';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -260,6 +261,9 @@ export default function ProductConfirmationScreen() {
                 imageUrl: productImageUrl || undefined,
                 familyId: familyId,
             });
+
+            // Trigger notification update
+            notificationService.runForegroundUpdate();
 
             // Show interstitial ad occasionally after successful item addition
             await adMobService.showInterstitialAdOnTrigger('item_added');

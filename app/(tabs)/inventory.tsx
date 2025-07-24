@@ -33,7 +33,7 @@ const FILTER_LABEL_KEYS: Record<FilterKey, string> = {
 export default function InventoryScreen() {
     const { t } = useTranslation();
     const { user } = useAuth();
-    const [inventoryScope, setInventoryScope] = useState<InventoryScope>('family');
+    const [inventoryScope, setInventoryScope] = useState<InventoryScope>('user');
     const { items, stats, isLoading } = useAppInventory(inventoryScope);
     const [currentFamilyId, setCurrentFamilyId] = useState<string | null>(null);
 

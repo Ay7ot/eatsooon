@@ -4,6 +4,7 @@ import LoadingButton from '@/components/ui/LoadingButton';
 import { Colors } from '@/constants/Colors';
 import { daysUntilExpiration } from '@/src/models/FoodItem';
 import { inventoryService } from '@/src/services/InventoryService';
+import { notificationService } from '@/src/services/notifications/NotificationService';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
@@ -218,6 +219,9 @@ export default function InventoryItemDetailScreen() {
                 imageUrl
             });
 
+            // Trigger notification update
+            notificationService.runForegroundUpdate();
+
             setShowAlert({
                 visible: true,
                 title: t('success'),
@@ -253,6 +257,10 @@ export default function InventoryItemDetailScreen() {
         try {
             const familyId = params.familyId && params.familyId.trim() !== '' ? params.familyId : null;
             await inventoryService.deleteFoodItem(params.itemId, familyId);
+
+            // Trigger notification update
+            notificationService.runForegroundUpdate();
+
             setShowAlert({
                 visible: true,
                 title: t('success'),

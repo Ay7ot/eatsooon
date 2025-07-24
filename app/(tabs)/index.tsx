@@ -7,11 +7,15 @@ import { useAppInventory } from '@/src/hooks/useAppInventory';
 import { FamilyMember } from '@/src/models/FamilyModel';
 import { useAuth } from '@/src/services/AuthContext';
 import { familyService } from '@/src/services/FamilyService';
+import { notificationService } from '@/src/services/notifications/NotificationService';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+const LAST_NOTIFICATION_CHECK_KEY = 'last_notification_check_timestamp';
+const FOREGROUND_CHECK_INTERVAL = 4 * 60 * 60 * 1000; // 4 hours
 
 type InventoryScope = 'user' | 'family';
 
@@ -19,7 +23,7 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const { t } = useTranslation();
-  const [inventoryScope, setInventoryScope] = useState<InventoryScope>('family');
+  const [inventoryScope, setInventoryScope] = useState<InventoryScope>('user');
   const { stats, isLoading: isInventoryLoading } = useAppInventory(inventoryScope);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[] | null>(null);
   const [currentFamilyId, setCurrentFamilyId] = useState<string | null>(null);
@@ -57,6 +61,16 @@ export default function HomeScreen() {
   }, [user]);
 
 
+  useEffect(() => {
+    // Run the check shortly after the app starts
+    const timer = setTimeout(() => {
+      notificationService.runForegroundUpdate();
+    }, 5000); // 5-second delay to not interfere with startup tasks
+
+    return () => clearTimeout(timer);
+  }, []);
+
+
   return (
     <View style={styles.container}>
       <CustomAppBar title="Eatsooon" onSettingsPress={() => router.push('/(tabs)/profile')} />
@@ -83,6 +97,7 @@ export default function HomeScreen() {
               </Pressable>
             )}
           </View>
+
 
           {isInventoryLoading ? (
             <HomeStatsSkeleton />

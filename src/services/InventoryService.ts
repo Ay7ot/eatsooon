@@ -169,6 +169,41 @@ class InventoryService {
         await activityService.logItemDeleted(itemName, imageUrl);
     }
 
+    async getAllItems(): Promise<FoodItem[]> {
+        const user = auth.currentUser;
+        if (!user) {
+            console.log('No user logged in, cannot fetch items.');
+            return [];
+        }
+
+        const personalQuery = query(collection(db, 'inventory', user.uid, 'items'));
+
+        const familyId = await familyService.getCurrentFamilyId();
+        const familyQuery = familyId
+            ? query(collection(db, 'families', familyId, 'pantry'))
+            : null;
+
+        try {
+            const [personalSnapshot, familySnapshot] = await Promise.all([
+                getDocs(personalQuery),
+                familyQuery ? getDocs(familyQuery) : Promise.resolve(null),
+            ]);
+
+            const personalItems = personalSnapshot.docs.map(foodItemFromFirestore);
+            const familyItems = familySnapshot ? familySnapshot.docs.map(foodItemFromFirestore) : [];
+
+            // Combine and remove duplicates by item ID
+            const allItems = [...personalItems, ...familyItems];
+            const uniqueItems = Array.from(new Map(allItems.map(item => [item.id, item])).values());
+
+            console.log(`Found ${uniqueItems.length} unique items.`);
+            return uniqueItems;
+        } catch (error) {
+            console.error('Error fetching all items:', error);
+            return [];
+        }
+    }
+
     async getExpiringSoonItems(days: number = 3): Promise<FoodItem[]> {
         const user = auth.currentUser;
         if (!user) {

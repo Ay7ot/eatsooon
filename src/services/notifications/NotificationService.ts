@@ -1,8 +1,12 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { FoodItem } from '../../models/FoodItem';
 import { inventoryService } from '../InventoryService';
+
+const LAST_NOTIFICATION_CHECK_KEY = 'last_notification_check_timestamp';
+const FOREGROUND_CHECK_INTERVAL = 4 * 60 * 60 * 1000; // 4 hours
 
 // Configure notification handling for both foreground and background
 Notifications.setNotificationHandler({
@@ -47,7 +51,7 @@ class NotificationService {
             try {
                 // Get Expo push token with proper project configuration
                 token = (await Notifications.getExpoPushTokenAsync({
-                    projectId: 'eatsooon'
+                    projectId: '694a6a8d-9603-4417-a237-d4ab1400986a'
                 })).data;
             } catch (error) {
                 console.error('❌ Error getting push token:', error);
@@ -72,6 +76,32 @@ class NotificationService {
     }
 
     /**
+     * A throttled method to run from the foreground, ensuring we don't over-schedule.
+     * This should be called on app startup and after any inventory changes.
+     */
+    async runForegroundUpdate(): Promise<void> {
+        try {
+            const lastCheckString = await AsyncStorage.getItem(LAST_NOTIFICATION_CHECK_KEY);
+            const now = Date.now();
+
+            if (lastCheckString) {
+                const lastCheck = parseInt(lastCheckString, 10);
+                if (now - lastCheck < FOREGROUND_CHECK_INTERVAL) {
+                    console.log(`[NotificationService] Skipping foreground update, last run was recent.`);
+                    return;
+                }
+            }
+
+            console.log('[NotificationService] Running foreground update to schedule notifications.');
+            await this.scheduleInventoryNotifications();
+            await AsyncStorage.setItem(LAST_NOTIFICATION_CHECK_KEY, now.toString());
+
+        } catch (e) {
+            console.error('Failed to run foreground notification update', e);
+        }
+    }
+
+    /**
      * Main method called by background task to check and schedule notifications
      * This is optimized for background execution
      */
@@ -80,17 +110,22 @@ class NotificationService {
             // 1. Get expiring items efficiently (this method already checks auth)
             const items = await inventoryService.getExpiringSoonItems(3);
             if (!items || items.length === 0) {
+                console.log('✅ [NotificationService] No expiring items found that require notification. Task finished.');
                 return;
             }
+
+            console.log(`[NotificationService] Found ${items.length} expiring items to process.`);
 
             // 2. Clear old notifications to prevent duplicates
             await this.clearInventoryNotifications();
 
             // 3. Process items and create notification configurations
             const notificationConfigs = this.createNotificationConfigs(items);
+            console.log(`[NotificationService] Created ${notificationConfigs.length} notification configurations.`);
 
             // 4. Schedule the notifications
             const scheduledCount = await this.scheduleNotificationConfigs(notificationConfigs);
+            console.log(`[NotificationService] Successfully scheduled ${scheduledCount} notifications.`);
 
         } catch (error) {
             console.error('❌ Error scheduling inventory notifications:', error);
@@ -185,10 +220,15 @@ class NotificationService {
      */
     private async scheduleNotificationConfigs(configs: NotificationConfig[]): Promise<number> {
         let scheduledCount = 0;
+        if (configs.length === 0) return 0;
 
         for (const config of configs) {
             try {
+                // Calculate trigger time in seconds from now. Must be > 0.
                 const secondsFromNow = Math.max(1, (config.trigger.getTime() - Date.now()) / 1000);
+
+                const minutesFromNow = Math.ceil(secondsFromNow / 60);
+                console.log(`[NotificationService] Scheduling "${config.title}" for item "${config.data.itemName}" to show in ~${minutesFromNow} minute(s).`);
 
                 await Notifications.scheduleNotificationAsync({
                     identifier: config.identifier,
@@ -207,7 +247,7 @@ class NotificationService {
                     } as Notifications.TimeIntervalTriggerInput
                 });
 
-               scheduledCount++;
+                scheduledCount++;
 
             } catch (error) {
                 console.error(`❌ Failed to schedule notification for ${config.data.itemName}:`, error);

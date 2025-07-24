@@ -446,5 +446,19 @@
   "notification_channel_description": "Notificaciones para artículos que vencen pronto",
 
   "item_details": "Detalles del Artículo",
-  "view_edit_item_details": "Ver y editar detalles del artículo"
+  "view_edit_item_details": "Ver y editar detalles del artículo",
+
+  "recipes_select_ingredients": "Seleccionar Ingredientes",
+  "recipes_ingredient_selection_title": "Elegir Ingredientes",
+  "recipes_ingredient_selection_subtitle": "Selecciona artículos de tu inventario para generar recetas",
+  "recipes_search_ingredients": "Buscar ingredientes...",
+  "recipes_no_ingredients_found": "No se encontraron ingredientes",
+  "recipes_selected_count": "{{count}} seleccionados",
+  "recipes_generate_recipes": "Generar Recetas",
+  "recipes_clear_selection": "Limpiar Todo",
+  "recipes_select_all": "Seleccionar Todo",
+  "recipes_using_selected": "Usando {{count}} ingredientes seleccionados",
+  "recipes_using_expiring": "Usando ingredientes que vencen",
+  "recipes_loading_ingredients": "Cargando tus ingredientes...",
+  "recipes_ingredient_modal_close": "Cerrar"
 }

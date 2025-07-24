@@ -11,242 +11,473 @@ import { recipeService } from '@/src/services/RecipeService';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+    ActivityIndicator,
+    Animated,
     FlatList,
+    Modal,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
-    View,
+    View
 } from 'react-native';
 
 export default function RecipesScreen() {
+    const { t } = useTranslation();
     const { user } = useAuth();
-    const { t, i18n } = useTranslation();
     const router = useRouter();
     const [recipes, setRecipes] = useState<Recipe[]>([]);
-    const [filteredRecipes, setFilteredRecipes] = useState<Recipe[]>([]);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
-    const [isUsingFallback, setIsUsingFallback] = useState(false);
-    const [isUsingExpiringItems, setIsUsingExpiringItems] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
-    const fetchRecipes = useCallback(async () => {
+    // Ingredient selection state
+    const [showIngredientModal, setShowIngredientModal] = useState(false);
+    const [allItems, setAllItems] = useState<FoodItem[]>([]);
+    const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
+    const [ingredientSearchQuery, setIngredientSearchQuery] = useState('');
+    const [isLoadingIngredients, setIsLoadingIngredients] = useState(false);
+
+    // Track if we've already shown the initial interstitial ad
+    const [hasShownInitialAd, setHasShownInitialAd] = useState(false);
+
+    // Animation values
+    const modalAnimation = useState(new Animated.Value(0))[0];
+    const fadeAnimation = useState(new Animated.Value(0))[0];
+
+    useEffect(() => {
+        fetchRecipes();
+    }, [user]);
+
+    const fetchAllItems = async () => {
+        setIsLoadingIngredients(true);
+        try {
+            const items = await inventoryService.getAllItems();
+            setAllItems(items);
+        } catch (error) {
+            console.error('Error fetching all items:', error);
+        } finally {
+            setIsLoadingIngredients(false);
+        }
+    };
+
+    const handleToggleIngredient = (ingredientName: string) => {
+        setSelectedIngredients(prev =>
+            prev.includes(ingredientName)
+                ? prev.filter(name => name !== ingredientName)
+                : [...prev, ingredientName]
+        );
+    };
+
+    const handleSelectAll = () => {
+        const filteredItems = getFilteredIngredients();
+        const allNames = filteredItems.map(item => item.name);
+        setSelectedIngredients(prev => {
+            const newSelection = [...new Set([...prev, ...allNames])];
+            return newSelection;
+        });
+    };
+
+    const handleClearAll = () => {
+        setSelectedIngredients([]);
+    };
+
+    const getFilteredIngredients = () => {
+        if (!ingredientSearchQuery.trim()) return allItems;
+
+        return allItems.filter(item =>
+            item.name.toLowerCase().includes(ingredientSearchQuery.toLowerCase()) ||
+            (item.category || '').toLowerCase().includes(ingredientSearchQuery.toLowerCase())
+        );
+    };
+
+    const openIngredientModal = async () => {
+        setShowIngredientModal(true);
+        await fetchAllItems();
+
+        // Animate modal in
+        Animated.parallel([
+            Animated.timing(modalAnimation, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+            }),
+            Animated.timing(fadeAnimation, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+            }),
+        ]).start();
+    };
+
+    const closeIngredientModal = () => {
+        Animated.parallel([
+            Animated.timing(modalAnimation, {
+                toValue: 0,
+                duration: 250,
+                useNativeDriver: true,
+            }),
+            Animated.timing(fadeAnimation, {
+                toValue: 0,
+                duration: 250,
+                useNativeDriver: true,
+            }),
+        ]).start(() => {
+            setShowIngredientModal(false);
+            setIngredientSearchQuery('');
+        });
+    };
+
+    const generateRecipesWithSelected = async () => {
+        if (selectedIngredients.length === 0) return;
+
+        closeIngredientModal();
+        setIsLoading(true);
+        setError(null);
+
+        // Temporarily disable interstitial ad during recipe loading to prevent scroll issues
+        // adMobService.showInterstitialAdOnTrigger('recipe_loading');
+
+        try {
+            const generatedRecipes = await recipeService.getRecipesByIngredients(
+                selectedIngredients,
+                7,
+                true,
+                false
+            );
+            setRecipes(generatedRecipes);
+        } catch (error) {
+            console.error('Error generating recipes with selected ingredients:', error);
+            setError('Failed to generate recipes. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const fetchRecipes = async () => {
         if (!user) return;
 
         setIsLoading(true);
         setError(null);
 
-        // Show ad while loading
-        adMobService.showInterstitialAdOnTrigger('recipe_loading');
+        // Show an interstitial ad only the very first time the screen loads
+        if (!hasShownInitialAd) {
+            adMobService.showInterstitialAdOnTrigger('recipe_loading');
+            setHasShownInitialAd(true);
+        }
 
         try {
             // First, try to get items that are expiring soon (within 3 days)
             let expiringItems: FoodItem[] = [];
             try {
                 expiringItems = await inventoryService.getExpiringSoonItems(3);
-                console.log(`Found ${expiringItems.length} items expiring within 3 days`);
             } catch (error) {
                 console.warn('Error fetching expiring items:', error);
             }
 
-            let ingredients: string[] = [];
-            let isUsingExpiringItems = false;
+            let recipes: Recipe[] = [];
 
             if (expiringItems.length > 0) {
-                // Use expiring items for recipe generation
-                ingredients = expiringItems.map(item => item.name);
-                isUsingExpiringItems = true;
-                setIsUsingExpiringItems(true);
-                console.log('Using expiring items for recipe generation:', ingredients);
+                // Use expiring items to generate recipes
+                const ingredientNames = expiringItems.map(item => item.name);
+                recipes = await recipeService.getRecipesByIngredients(
+                    ingredientNames,
+                    7,
+                    true, // use cache
+                    true  // is expiring soon
+                );
             } else {
-                // Fallback to all items from inventory
-                const allItems: FoodItem[] = await new Promise((resolve) => {
-                    const unsubscribe = inventoryService.listenFoodItems((list) => {
-                        unsubscribe();
-                        resolve(list);
-                    });
-                });
-
-                ingredients = allItems.map(item => item.name);
-                setIsUsingExpiringItems(false);
-                console.log('No expiring items found, using all inventory items:', ingredients);
+                // Fallback to default recipes if no expiring items
+                recipes = await recipeService.getRecipesByIngredients([], 7, true, false);
             }
 
-            // Fallback ingredients if pantry is empty
-            if (ingredients.length === 0) {
-                setIsUsingFallback(true);
-                ingredients = ['Eggs', 'Milk', 'Bread', 'Tomato', 'Onion', 'Garlic', 'Chicken'];
-                console.log('Using fallback ingredients:', ingredients);
-            } else {
-                setIsUsingFallback(false);
-            }
-
-            // Start with 7 recipes, then fallback to fewer if needed
-            const recipeLimit = Math.min(7, isUsingExpiringItems ? 7 : 10);
-
-            // Fetch recipes by ingredients - this now returns cached results immediately if available
-            const basicRecipes = await recipeService.getRecipesByIngredients(
-                ingredients,
-                recipeLimit,
-                true, // Use cache for immediate results
-                isUsingExpiringItems // Pass the expiring items flag
-            );
-
-            if (basicRecipes.length === 0) {
-                setRecipes([]);
-                setFilteredRecipes([]);
-                return;
-            }
-
-            // Get detailed information - this is now much faster with improved caching
-            const recipeIds = basicRecipes.map(r => r.id);
-            const detailedRecipes = await recipeService.getRecipesInformationBulk(recipeIds);
-
-            // Combine basic info with detailed info
-            const finalRecipes = detailedRecipes.map(detailed => {
-                const basic = basicRecipes.find(b => b.id === detailed.id);
-                return {
-                    ...detailed,
-                    usedIngredientCount: basic?.usedIngredientCount || detailed.usedIngredientCount || 0,
-                    missedIngredientCount: basic?.missedIngredientCount || detailed.missedIngredientCount || 0,
-                };
-            });
-
-            setRecipes(finalRecipes);
-            setFilteredRecipes(finalRecipes);
-
-            // Prefetch common recipes in background for better future performance
-            if (!isUsingFallback) {
-                recipeService.prefetchCommonRecipes();
-            }
-
-        } catch (err) {
-            console.error('Error fetching recipes:', err);
-            setError(err instanceof Error ? err.message : 'Failed to load recipes');
+            setRecipes(recipes);
+        } catch (error) {
+            console.error('Error fetching recipes:', error);
+            setError('Failed to load recipes. Please try again.');
         } finally {
             setIsLoading(false);
         }
-    }, [user, i18n.language]);
+    };
 
-    useEffect(() => {
-        fetchRecipes();
-    }, [fetchRecipes]);
+    const handleSearch = async () => {
+        if (!searchQuery.trim()) {
+            fetchRecipes();
+            return;
+        }
 
-    useEffect(() => {
-        const query = searchQuery.toLowerCase();
-        const filtered = recipes.filter(recipe =>
-            recipe.title.toLowerCase().includes(query)
-        );
-        setFilteredRecipes(filtered);
-    }, [searchQuery, recipes]);
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const searchResults = await recipeService.searchRecipes(searchQuery, 10);
+            setRecipes(searchResults);
+        } catch (error) {
+            console.error('Error searching recipes:', error);
+            setError('Failed to search recipes. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleRecipePress = async (recipe: Recipe) => {
         // Log activity
-        activityService.logRecipeViewed(recipe.title, recipe.imageUrl);
+        await activityService.logRecipeViewed(recipe.title, recipe.imageUrl);
 
         // Show interstitial ad occasionally
-        await adMobService.showInterstitialAdOnTrigger('recipe_view');
+        adMobService.showInterstitialAdOnTrigger('recipe_view');
 
-        // Navigate to recipe detail
         router.push({
             pathname: '/recipe-detail',
-            params: { recipeData: JSON.stringify(recipe) }
+            params: { recipeId: recipe.id.toString() }
         });
     };
 
     const renderRecipeCard = ({ item }: { item: Recipe }) => (
-        <RecipeCard recipe={item} onPress={() => handleRecipePress(item)} isUsingFallback={isUsingFallback} />
+        <RecipeCard
+            recipe={item}
+            onPress={() => handleRecipePress(item)}
+            isUsingFallback={recipes.length === 0}
+        />
     );
 
-    if (!user) {
+    const getEmojiForCategory = (category: string) => {
+        const c = category.toLowerCase();
+        if (c === 'bakery') return '🍞';
+        if (c === 'beverages') return '🥤';
+        if (c === 'dairy') return '🥛';
+        if (c === 'frozen') return '🧊';
+        if (c === 'fruits') return '🍎';
+        if (c === 'meat') return '🍗';
+        if (c === 'pantry') return '🥫';
+        if (c === 'snacks') return '🍪';
+        if (c === 'vegetables') return '🥬';
+        if (c === 'other') return '📦';
+        return '🥫';
+    };
+
+    const renderIngredientItem = ({ item }: { item: FoodItem }) => {
+        const isSelected = selectedIngredients.includes(item.name);
+        const emoji = getEmojiForCategory(item.category || 'other');
+
         return (
-            <View style={styles.container}>
-                <CustomAppBar title="Eatsooon" />
-                <View style={styles.centerContent}>
-                    <Text style={styles.errorText}>{t('recipes_sign_in_required')}</Text>
+            <Pressable
+                style={[styles.ingredientItem, isSelected && styles.ingredientItemSelected]}
+                onPress={() => handleToggleIngredient(item.name)}
+            >
+                <View style={styles.ingredientContent}>
+                    <View style={styles.ingredientInfo}>
+                        <Text style={styles.ingredientEmoji}>{emoji}</Text>
+                        <View style={styles.ingredientTextContainer}>
+                            <Text style={[styles.ingredientName, isSelected && styles.ingredientNameSelected]}>
+                                {item.name}
+                            </Text>
+                            <Text style={[styles.ingredientDetails, isSelected && styles.ingredientDetailsSelected]}>
+                                {item.quantity} {item.unit} • {item.category}
+                            </Text>
+                        </View>
+                    </View>
+                    {isSelected && (
+                        <MaterialIcons
+                            name="check-circle"
+                            size={20}
+                            color={Colors.secondaryColor}
+                            style={styles.checkIcon}
+                        />
+                    )}
                 </View>
-            </View>
+            </Pressable>
         );
-    }
+    };
 
     return (
         <View style={styles.container}>
             <CustomAppBar title="Eatsooon" />
 
-            {/* Search Bar */}
-            <View style={styles.searchContainer}>
-                <MaterialIcons name="search" size={20} color="#9CA3AF" />
-                <TextInput
-                    style={styles.searchInput}
-                    placeholder={t('recipes_search_hint')}
-                    placeholderTextColor="#9CA3AF"
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                />
-                {searchQuery.length > 0 && (
-                    <Pressable onPress={() => setSearchQuery('')}>
-                        <MaterialIcons name="close" size={20} color="#9CA3AF" />
-                    </Pressable>
-                )}
+            {/* Header Section */}
+            <View style={styles.headerSection}>
+                <Text style={styles.headerTitle}>{t('recipes', 'Recipes')}</Text>
+                <Text style={styles.headerSubtitle}>
+                    {selectedIngredients.length > 0
+                        ? t('recipes_using_selected', { count: selectedIngredients.length })
+                        : t('recipes_using_expiring', 'Using expiring ingredients')}
+                </Text>
             </View>
 
-            {/* Fallback Notice */}
-            {isUsingFallback && (
-                <View style={styles.fallbackNotice}>
-                    <MaterialIcons name="info" size={20} color="#0C4A6E" />
-                    <Text style={styles.fallbackText}>
-                        {t('recipes_showing_popular')}
-                    </Text>
+            {/* Search and Filter Section */}
+            <View style={styles.searchSection}>
+                <View style={styles.searchContainer}>
+                    <MaterialIcons name="search" size={20} color="#9CA3AF" />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder={t('search_recipes', 'Search recipes...')}
+                        placeholderTextColor="#9CA3AF"
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        onSubmitEditing={handleSearch}
+                        returnKeyType="search"
+                    />
+                    {searchQuery.length > 0 && (
+                        <Pressable onPress={() => setSearchQuery('')}>
+                            <MaterialIcons name="close" size={20} color="#9CA3AF" />
+                        </Pressable>
+                    )}
                 </View>
-            )}
 
-            {/* Expiring Items Notice */}
-            {isUsingExpiringItems && !isUsingFallback && (
-                <View style={[styles.fallbackNotice, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}>
-                    <MaterialIcons name="schedule" size={20} color="#D97706" />
-                    <Text style={[styles.fallbackText, { color: '#92400E' }]}>
-                        {t('recipes_using_expiring_items')}
+                <Pressable style={styles.ingredientButton} onPress={openIngredientModal}>
+                    <MaterialIcons name="tune" size={20} color={Colors.secondaryColor} />
+                    <Text style={styles.ingredientButtonText}>
+                        {t('recipes_select_ingredients')}
                     </Text>
-                </View>
-            )}
+                    {selectedIngredients.length > 0 && (
+                        <View style={styles.selectedBadge}>
+                            <Text style={styles.selectedBadgeText}>{selectedIngredients.length}</Text>
+                        </View>
+                    )}
+                </Pressable>
+            </View>
 
             {/* Content */}
             {isLoading ? (
                 <RecipesSkeleton />
             ) : error ? (
-                <View style={styles.centerContent}>
-                    <MaterialIcons name="error-outline" size={64} color="#EF4444" />
-                    <Text style={styles.errorTitle}>{t('recipes_error_loading_title')}</Text>
+                <View style={styles.errorContainer}>
+                    <MaterialIcons name="error-outline" size={48} color="#EF4444" />
                     <Text style={styles.errorText}>{error}</Text>
                     <Pressable style={styles.retryButton} onPress={fetchRecipes}>
-                        <Text style={styles.retryButtonText}>{t('recipes_retry')}</Text>
-                    </Pressable>
-                </View>
-            ) : filteredRecipes.length === 0 ? (
-                <View style={styles.centerContent}>
-                    <MaterialIcons name="restaurant-menu" size={64} color="#9CA3AF" />
-                    <Text style={styles.emptyTitle}>{t('recipes_no_recipes_found')}</Text>
-                    <Text style={styles.emptyText}>
-                        {searchQuery ? t('recipes_adjust_search') : t('recipes_add_ingredients')}
-                    </Text>
-                    <Pressable style={styles.retryButton} onPress={fetchRecipes}>
-                        <Text style={styles.retryButtonText}>{t('recipes_retry')}</Text>
+                        <Text style={styles.retryButtonText}>{t('retry', 'Retry')}</Text>
                     </Pressable>
                 </View>
             ) : (
                 <FlatList
-                    data={filteredRecipes}
-                    renderItem={renderRecipeCard}
+                    style={{ flex: 1 }}
+                    data={recipes}
                     keyExtractor={(item) => item.id.toString()}
-                    contentContainerStyle={[styles.listContainer, { paddingBottom: 96 }]}
+                    renderItem={renderRecipeCard}
+                    contentContainerStyle={styles.recipesList}
                     showsVerticalScrollIndicator={false}
+                    ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
                 />
             )}
+
+            {/* Ingredient Selection Modal */}
+            <Modal
+                visible={showIngredientModal}
+                transparent={true}
+                animationType="none"
+                onRequestClose={closeIngredientModal}
+            >
+                <Animated.View
+                    style={[
+                        styles.modalOverlay,
+                        {
+                            opacity: fadeAnimation,
+                        }
+                    ]}
+                >
+                    <Animated.View
+                        style={[
+                            styles.modalContainer,
+                            {
+                                transform: [{
+                                    translateY: modalAnimation.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [600, 0],
+                                    })
+                                }]
+                            }
+                        ]}
+                    >
+                        {/* Modal Header */}
+                        <View style={styles.modalHeader}>
+                            <View style={styles.modalHeaderContent}>
+                                <Text style={styles.modalTitle}>{t('recipes_ingredient_selection_title')}</Text>
+                                <Text style={styles.modalSubtitle}>{t('recipes_ingredient_selection_subtitle')}</Text>
+                            </View>
+                            <Pressable style={styles.modalCloseButton} onPress={closeIngredientModal}>
+                                <MaterialIcons name="close" size={24} color="#6B7280" />
+                            </Pressable>
+                        </View>
+
+                        {/* Search Bar */}
+                        <View style={styles.modalSearchContainer}>
+                            <MaterialIcons name="search" size={20} color="#9CA3AF" />
+                            <TextInput
+                                style={styles.modalSearchInput}
+                                placeholder={t('recipes_search_ingredients')}
+                                placeholderTextColor="#9CA3AF"
+                                value={ingredientSearchQuery}
+                                onChangeText={setIngredientSearchQuery}
+                            />
+                        </View>
+
+                        {/* Action Buttons */}
+                        <View style={styles.modalActions}>
+                            <Pressable style={styles.actionButton} onPress={handleSelectAll}>
+                                <Text style={styles.actionButtonText}>{t('recipes_select_all')}</Text>
+                            </Pressable>
+                            <Pressable style={styles.actionButton} onPress={handleClearAll}>
+                                <Text style={styles.actionButtonText}>{t('recipes_clear_selection')}</Text>
+                            </Pressable>
+                            <View style={styles.selectedCount}>
+                                <Text style={styles.selectedCountText}>
+                                    {t('recipes_selected_count', { count: selectedIngredients.length })}
+                                </Text>
+                            </View>
+                        </View>
+
+                        {/* Ingredients List */}
+                        {isLoadingIngredients ? (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator size="large" color={Colors.secondaryColor} />
+                                <Text style={styles.loadingText}>{t('recipes_loading_ingredients')}</Text>
+                            </View>
+                        ) : (
+                            <FlatList
+                                data={getFilteredIngredients()}
+                                keyExtractor={(item) => item.id}
+                                renderItem={renderIngredientItem}
+                                style={styles.ingredientsList}
+                                showsVerticalScrollIndicator={false}
+                                ListEmptyComponent={
+                                    <View style={styles.emptyContainer}>
+                                        <MaterialIcons name="inventory-2" size={48} color="#9CA3AF" />
+                                        <Text style={styles.emptyText}>{t('recipes_no_ingredients_found')}</Text>
+                                    </View>
+                                }
+                            />
+                        )}
+
+                        {/* Generate Button */}
+                        <View style={styles.modalFooter}>
+                            <Pressable
+                                style={[
+                                    styles.generateButton,
+                                    selectedIngredients.length === 0 && styles.generateButtonDisabled
+                                ]}
+                                onPress={generateRecipesWithSelected}
+                                disabled={selectedIngredients.length === 0}
+                            >
+                                <MaterialIcons
+                                    name="restaurant"
+                                    size={20}
+                                    color={selectedIngredients.length > 0 ? Colors.backgroundWhite : '#9CA3AF'}
+                                />
+                                <Text style={[
+                                    styles.generateButtonText,
+                                    selectedIngredients.length === 0 && styles.generateButtonTextDisabled
+                                ]}>
+                                    {t('recipes_generate_recipes')}
+                                </Text>
+                            </Pressable>
+                        </View>
+                    </Animated.View>
+                </Animated.View>
+            </Modal>
         </View>
     );
 }
@@ -383,7 +614,7 @@ function RecipeCard({ recipe, onPress, isUsingFallback }: {
 
 function RecipesSkeleton() {
     return (
-        <ScrollView style={[styles.listContainer, { paddingBottom: 96 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView style={[styles.recipesList, { paddingBottom: 96 }]} showsVerticalScrollIndicator={false}>
             {Array.from({ length: 5 }).map((_, idx) => (
                 <View key={idx} style={styles.skeletonCard} />
             ))}
@@ -396,7 +627,31 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: Colors.backgroundColor,
     },
+    headerSection: {
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 10,
+    },
+    headerTitle: {
+        fontFamily: 'Nunito-Bold',
+        fontSize: 28,
+        color: Colors.textPrimary,
+    },
+    headerSubtitle: {
+        fontFamily: 'Inter-Regular',
+        fontSize: 14,
+        color: Colors.textSecondary,
+        marginTop: 4,
+    },
+    searchSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        marginTop: 10,
+        gap: 12,
+    },
     searchContainer: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: Colors.backgroundWhite,
@@ -404,8 +659,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.borderColor,
         paddingHorizontal: 16,
-        marginHorizontal: 20,
-        marginTop: 20,
         height: 48,
     },
     searchInput: {
@@ -415,35 +668,41 @@ const styles = StyleSheet.create({
         color: Colors.textPrimary,
         marginLeft: 8,
     },
-    fallbackNotice: {
+    ingredientButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#E0F2FE',
-        borderColor: '#7DD3FC',
+        backgroundColor: Colors.backgroundWhite,
+        borderRadius: 14.4,
         borderWidth: 1,
-        borderRadius: 12,
-        padding: 12,
-        margin: 20,
+        borderColor: Colors.borderColor,
+        paddingHorizontal: 16,
+        height: 48,
+        gap: 8,
     },
-    fallbackText: {
-        flex: 1,
-        marginLeft: 12,
+    ingredientButtonText: {
         fontFamily: 'Inter-Medium',
         fontSize: 14,
-        color: '#0C4A6E',
+        color: Colors.textPrimary,
     },
-    centerContent: {
+    selectedBadge: {
+        backgroundColor: Colors.secondaryColor,
+        borderRadius: 12,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+    },
+    selectedBadgeText: {
+        fontFamily: 'Inter-Bold',
+        fontSize: 12,
+        color: Colors.backgroundWhite,
+    },
+    recipesList: {
+        padding: 20,
+    },
+    errorContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 40,
-    },
-    errorTitle: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 18,
-        color: Colors.textPrimary,
-        marginTop: 16,
-        marginBottom: 8,
     },
     errorText: {
         fontFamily: 'Inter-Regular',
@@ -462,22 +721,6 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter-SemiBold',
         fontSize: 14,
         color: Colors.backgroundWhite,
-    },
-    emptyTitle: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 18,
-        color: Colors.textPrimary,
-        marginTop: 16,
-        marginBottom: 8,
-    },
-    emptyText: {
-        fontFamily: 'Inter-Regular',
-        fontSize: 14,
-        color: Colors.textSecondary,
-        textAlign: 'center',
-    },
-    listContainer: {
-        padding: 20,
     },
     recipeCard: {
         backgroundColor: Colors.backgroundWhite,
@@ -605,5 +848,251 @@ const styles = StyleSheet.create({
         backgroundColor: '#E5E7EB',
         borderRadius: 16,
         marginBottom: 20,
+    },
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+    },
+    modalContainer: {
+        width: '100%',
+        height: '70%',
+        backgroundColor: Colors.backgroundWhite,
+        borderRadius: 20,
+        padding: 0,
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 10,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F3F4F6',
+    },
+    modalHeaderContent: {
+        flex: 1,
+    },
+    modalTitle: {
+        fontFamily: 'Nunito-Bold',
+        fontSize: 24,
+        color: Colors.textPrimary,
+    },
+    modalSubtitle: {
+        fontFamily: 'Inter-Regular',
+        fontSize: 14,
+        color: Colors.textSecondary,
+        marginTop: 4,
+    },
+    modalCloseButton: {
+        padding: 8,
+        borderRadius: 20,
+        backgroundColor: '#F3F4F6',
+    },
+    modalSearchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F9FAFB',
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        marginHorizontal: 20,
+        marginVertical: 16,
+        height: 48,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    modalSearchInput: {
+        flex: 1,
+        fontFamily: 'Inter-Regular',
+        fontSize: 16,
+        color: Colors.textPrimary,
+        marginLeft: 12,
+    },
+    modalActions: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        marginBottom: 16,
+        alignItems: 'center',
+    },
+    actionButton: {
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        backgroundColor: '#F3F4F6',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    actionButtonText: {
+        fontFamily: 'Inter-SemiBold',
+        fontSize: 12,
+        color: Colors.textSecondary,
+    },
+    selectedCount: {
+        backgroundColor: Colors.secondaryColor + '15',
+        borderRadius: 20,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderWidth: 1,
+        borderColor: Colors.secondaryColor + '30',
+    },
+    selectedCountText: {
+        fontFamily: 'Inter-Bold',
+        fontSize: 12,
+        color: Colors.secondaryColor,
+    },
+    ingredientsList: {
+        flex: 1,
+        paddingHorizontal: 20,
+    },
+    ingredientItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        paddingVertical: 16,
+        paddingHorizontal: 16,
+        marginBottom: 8,
+        borderRadius: 12,
+        backgroundColor: Colors.backgroundWhite,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    ingredientItemSelected: {
+        backgroundColor: Colors.secondaryColor + '10',
+        borderColor: Colors.secondaryColor + '40',
+        shadowColor: Colors.secondaryColor,
+        shadowOpacity: 0.1,
+        elevation: 2,
+    },
+    ingredientContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    ingredientInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    ingredientEmoji: {
+        fontSize: 32,
+        marginRight: 12,
+    },
+    ingredientTextContainer: {
+        flex: 1,
+    },
+    ingredientName: {
+        fontFamily: 'Inter-SemiBold',
+        fontSize: 16,
+        color: Colors.textPrimary,
+        marginBottom: 2,
+    },
+    ingredientNameSelected: {
+        fontFamily: 'Inter-Bold',
+        color: Colors.secondaryColor,
+    },
+    ingredientDetails: {
+        fontFamily: 'Inter-Regular',
+        fontSize: 13,
+        color: Colors.textSecondary,
+    },
+    ingredientDetailsSelected: {
+        fontFamily: 'Inter-Medium',
+        color: Colors.secondaryColor,
+        opacity: 0.8,
+    },
+    checkbox: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: '#D1D5DB',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: Colors.backgroundWhite,
+        marginLeft: 'auto',
+        marginRight: 16,
+    },
+    checkboxSelected: {
+        backgroundColor: Colors.secondaryColor,
+        borderColor: Colors.secondaryColor,
+    },
+    checkIcon: {
+        marginLeft: 'auto',
+        marginRight: 16,
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 60,
+    },
+    emptyText: {
+        fontFamily: 'Inter-Medium',
+        fontSize: 16,
+        color: Colors.textSecondary,
+        marginTop: 16,
+        textAlign: 'center',
+    },
+    modalFooter: {
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        paddingBottom: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#F3F4F6',
+        backgroundColor: '#FAFBFC',
+    },
+    generateButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: Colors.secondaryColor,
+        paddingVertical: 16,
+        paddingHorizontal: 24,
+        borderRadius: 12,
+        shadowColor: Colors.secondaryColor,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 6,
+    },
+    generateButtonText: {
+        fontFamily: 'Inter-Bold',
+        fontSize: 16,
+        color: Colors.backgroundWhite,
+        marginLeft: 8,
+    },
+    generateButtonDisabled: {
+        opacity: 0.5,
+        backgroundColor: '#E5E7EB',
+        shadowOpacity: 0,
+        elevation: 0,
+    },
+    generateButtonTextDisabled: {
+        color: '#9CA3AF',
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 60,
+    },
+    loadingText: {
+        fontFamily: 'Inter-Medium',
+        fontSize: 16,
+        color: Colors.textSecondary,
+        marginTop: 16,
     },
 }); 
