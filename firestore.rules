@@ -22,7 +22,7 @@ service cloud.firestore {
         // Only allow updates to family-related fields
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['familyIds', 'currentFamilyId']);
       
-      allow delete: if false;
+      allow delete: if request.auth != null && request.auth.uid == userId;
       
       // Activities subcollection
       // - Users can create, read, update, and delete their own activities.
@@ -126,6 +126,16 @@ service cloud.firestore {
             // The user must be adding themselves with the 'member' role. They cannot grant themselves admin.
             request.resource.data.members[request.auth.uid].role == 'member'
           )
+          ||
+          // Condition 3: Requester is removing themselves from the family.
+          (
+            // The user must have been a member before this update.
+            resource.data.members.keys().hasAny([request.auth.uid]) &&
+            // The user must be removing themselves, and only themselves.
+            request.resource.data.members.diff(resource.data.members).removedKeys().hasOnly([request.auth.uid]) &&
+            request.resource.data.members.diff(resource.data.members).addedKeys().size() == 0 &&
+            request.resource.data.members.diff(resource.data.members).changedKeys().size() == 0
+          )
         );
 
       // Allow family admin to delete the family members document
@@ -161,8 +171,16 @@ service cloud.firestore {
 
       // Allow family admin to delete invitations for their family
       allow delete: if request.auth != null &&
-        exists(/databases/$(database)/documents/families/$(resource.data.familyId)) &&
-        get(/databases/$(database)/documents/families/$(resource.data.familyId)).data.adminUserId == request.auth.uid;
+        (
+          (
+            exists(/databases/$(database)/documents/families/$(resource.data.familyId)) &&
+            get(/databases/$(database)/documents/families/$(resource.data.familyId)).data.adminUserId == request.auth.uid
+          ) 
+          || 
+          (
+            resource.data.inviterUserId == request.auth.uid
+          )
+        );
     }
 
     // Family Activity Feed

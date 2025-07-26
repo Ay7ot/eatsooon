@@ -181,6 +181,13 @@
   "profile_sign_out_confirm_title": "Cerrar sesión",
   "profile_sign_out_confirm_message": "Estás seguro de que quieres cerrar sesión? Tendrás que iniciar sesión nuevamente para acceder a tus datos.",
   "profile_cancel": "Cancelar",
+
+  "profile_delete_account": "Eliminar cuenta",
+  "profile_delete_account_subtitle": "Eliminar permanentemente tu cuenta y tus datos",
+  "profile_delete_account_title": "¿Eliminar cuenta?",
+  "profile_delete_account_message": "Esta acción es permanente y no se puede deshacer. Todos tus datos, incluido el inventario y las conexiones familiares, se eliminarán.",
+  "profile_delete_account_confirm": "Eliminar cuenta",
+
   "profile_activity_stats": "Estadísticas de actividad",
   "profile_pantry_stats": "Estadísticas de la despensa",
   "profile_total_items": "Artículos",
@@ -350,6 +357,8 @@
   "scan_requesting_permissions": "Solicitando permisos de cámara...",
   "scan_camera_permission_required": "Se requiere permiso de cámara para escanear productos",
   "scan_grant_permission": "Otorgar Permiso",
+  "scan_camera_permission_denied_permanently": "El permiso de la cámara ha sido denegado permanentemente. Por favor, ve a la configuración de tu dispositivo para activarlo.",
+  "scan_open_settings": "Abrir configuración",
   "scan_expiry_not_detected": "Fecha de Vencimiento No Encontrada",
   "scan_please_scan_expiry": "Por favor apunta la cámara al texto de la fecha de vencimiento",
   "scan_error": "Error de Escaneo",

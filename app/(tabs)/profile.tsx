@@ -19,6 +19,7 @@ import {
     StyleSheet,
     Text,
     View,
+    ActivityIndicator,
 } from 'react-native';
 
 interface UserStats {
@@ -28,7 +29,7 @@ interface UserStats {
 }
 
 export default function ProfileScreen() {
-    const { user, signOut } = useAuth();
+    const { user, signOut, deleteAccount } = useAuth();
     const { t } = useTranslation();
     const router = useRouter();
     const { currentLanguage, changeLanguage, availableLanguages } = useLanguage();
@@ -40,6 +41,8 @@ export default function ProfileScreen() {
     });
     const [isLanguageModalVisible, setIsLanguageModalVisible] = useState(false);
     const [isSignOutModalVisible, setIsSignOutModalVisible] = useState(false);
+    const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
     const { stats: inventoryStats, isLoading: isInventoryLoading } = useAppInventory('user');
@@ -81,6 +84,22 @@ export default function ProfileScreen() {
         signOut();
     };
 
+    const handleDeleteAccount = () => {
+        setIsDeleteModalVisible(true);
+    };
+
+    const confirmDeleteAccount = async () => {
+        setIsDeleting(true);
+        const success = await deleteAccount();
+        setIsDeleting(false);
+        setIsDeleteModalVisible(false);
+
+        if (!success) {
+            // Optionally, show an error toast or alert
+            alert('Failed to delete account. Please try again.');
+        }
+    };
+
     const handleLanguageChange = async (languageCode: string) => {
         await changeLanguage(languageCode);
         setIsLanguageModalVisible(false);
@@ -120,6 +139,44 @@ export default function ProfileScreen() {
                             onPress={confirmSignOut}
                         >
                             <Text style={styles.confirmButtonText}>{t('profile_sign_out')}</Text>
+                        </Pressable>
+                    </View>
+                </View>
+            </View>
+        </Modal>
+    );
+
+    const renderDeleteAccountModal = () => (
+        <Modal
+            visible={isDeleteModalVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setIsDeleteModalVisible(false)}
+        >
+            <View style={styles.modalOverlay}>
+                <View style={styles.signOutModalContent}>
+                    <View style={styles.signOutIconContainer}>
+                        <MaterialIcons name="delete-forever" size={32} color={Colors.red} />
+                    </View>
+                    <Text style={styles.signOutTitle}>{t('profile_delete_account_title')}</Text>
+                    <Text style={styles.signOutMessage}>{t('profile_delete_account_message')}</Text>
+                    <View style={styles.signOutButtons}>
+                        <Pressable
+                            style={[styles.signOutButton, styles.cancelButton]}
+                            onPress={() => setIsDeleteModalVisible(false)}
+                        >
+                            <Text style={styles.cancelButtonText}>{t('profile_cancel')}</Text>
+                        </Pressable>
+                        <Pressable
+                            style={[styles.signOutButton, styles.confirmButton, isDeleting && styles.disabledButton]}
+                            onPress={confirmDeleteAccount}
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? (
+                                <ActivityIndicator color={Colors.backgroundWhite} />
+                            ) : (
+                                <Text style={styles.confirmButtonText}>{t('profile_delete_account_confirm')}</Text>
+                            )}
                         </Pressable>
                     </View>
                 </View>
@@ -299,6 +356,17 @@ export default function ProfileScreen() {
                             </View>
                             <MaterialIcons name="chevron-right" size={24} color={Colors.textTertiary} />
                         </Pressable>
+
+                        <Pressable style={styles.actionItem} onPress={handleDeleteAccount}>
+                            <View style={styles.actionIconContainer}>
+                                <MaterialIcons name="delete-forever" size={24} color={Colors.red} />
+                            </View>
+                            <View style={styles.actionContent}>
+                                <Text style={[styles.actionTitle, { color: Colors.red }]}>{t('profile_delete_account')}</Text>
+                                <Text style={styles.actionSubtitle}>{t('profile_delete_account_subtitle')}</Text>
+                            </View>
+                            <MaterialIcons name="chevron-right" size={24} color={Colors.textTertiary} />
+                        </Pressable>
                     </View>
                 </View>
 
@@ -307,6 +375,7 @@ export default function ProfileScreen() {
 
             {renderLanguageModal()}
             {renderSignOutModal()}
+            {renderDeleteAccountModal()}
         </View>
     );
 }
@@ -626,6 +695,9 @@ const styles = StyleSheet.create({
     },
     confirmButton: {
         backgroundColor: Colors.red,
+    },
+    disabledButton: {
+        backgroundColor: Colors.textTertiary,
     },
     cancelButtonText: {
         fontFamily: 'Inter-SemiBold',

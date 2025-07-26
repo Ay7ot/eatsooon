@@ -280,6 +280,52 @@ class FamilyService {
         }
     }
 
+    // A user can leave a family they are a member of
+    async leaveFamily(familyId: string, userId: string): Promise<void> {
+        try {
+            if (!this.currentUserId || this.currentUserId !== userId) {
+                throw new Error('You can only leave a family for yourself.');
+            }
+
+            const members = await this.getFamilyMembers(familyId);
+            const member = members.find(m => m.userId === userId);
+
+            if (!member) {
+                throw new Error('You are not a member of this family.');
+            }
+
+            if (member.role === FamilyMemberRole.ADMIN) {
+                throw new Error('Admins cannot leave a family. You must delete the family or transfer ownership.');
+            }
+
+            const batch = writeBatch(db);
+
+            // Remove member from the familyMembers document
+            const familyMembersRef = doc(db, 'familyMembers', familyId);
+            batch.update(familyMembersRef, {
+                [`members.${userId}`]: deleteField()
+            });
+
+            // Decrement member count in the family document
+            const familyRef = doc(db, 'families', familyId);
+            batch.update(familyRef, {
+                'statistics.memberCount': increment(-1),
+            });
+
+            // Update the user's document
+            const userRef = doc(db, 'users', userId);
+            batch.update(userRef, {
+                familyIds: arrayRemove(familyId),
+                currentFamilyId: deleteField(), // Or switch to another family
+            });
+
+            await batch.commit();
+        } catch (error) {
+            console.error('Error leaving family:', error);
+            throw new Error(`Failed to leave family: ${error}`);
+        }
+    }
+
     // Remove a member from a family
     async removeMember(familyId: string, userId: string): Promise<void> {
         try {
@@ -563,9 +609,20 @@ class FamilyService {
         }
     }
 
-    async deleteFamily(familyId: string): Promise<{ switchedToFamily?: { id: string; name: string } }> {
-        if (!this.currentUserId) {
-            throw new Error("No user is currently signed in.");
+    /**
+     * Deletes an entire family and all associated data.
+     * This action is permanent and can only be performed by the family admin.
+     * It will:
+     * - Remove the family association from all members' user profiles.
+     * - Delete all pending invitations for the family.
+     * - Delete all subcollections (activities, pantry).
+     * - Delete the familyMembers document.
+     * - Delete the main family document.
+     * - Attempt to switch the admin to another family if they belong to others.
+     */
+    async deleteFamily(familyId: string, adminId: string): Promise<{ switchedToFamily?: { id: string; name: string } }> {
+        if (!this.currentUserId || this.currentUserId !== adminId) {
+            throw new Error("No user is currently signed in or you are not the admin.");
         }
 
         const familyDoc = await this.getFamily(familyId);

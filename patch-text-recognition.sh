@@ -53,6 +53,10 @@ if [ -f "$IOS_INFO_PLIST_PATH" ]; then
     echo "Patching $IOS_INFO_PLIST_PATH..."
     # Update the CFBundleDisplayName value from "eatsooon" to "Eatsooon"
     sed "${sedi[@]}" "s/<string>eatsooon<\/string>/<string>Eatsooon<\/string>/" "$IOS_INFO_PLIST_PATH"
+
+    # Update the NSCameraUsageDescription to be more descriptive
+    sed "${sedi[@]}" "s|<string>Allow \\\$(PRODUCT_NAME) to access your camera</string>|<string>To help you quickly add items to your inventory, our app uses your camera to scan barcodes and automatically identify products. You can also scan the expiry date on your food items to get timely reminders before they go bad.</string>|" "$IOS_INFO_PLIST_PATH"
+    
     echo "iOS Info.plist patch applied successfully!"
 else
     echo "Warning: $IOS_INFO_PLIST_PATH not found. iOS app name may not be updated."

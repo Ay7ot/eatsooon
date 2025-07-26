@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import {
     createUserWithEmailAndPassword,
+    deleteUser,
     signOut as firebaseSignOut,
     onAuthStateChanged,
     sendPasswordResetEmail,
@@ -11,6 +12,7 @@ import {
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth, db } from './firebase';
+import { userService } from './UserService';
 
 interface AuthContextType {
     user: User | null;
@@ -23,6 +25,7 @@ interface AuthContextType {
     updateUserProfile: (name: string) => Promise<boolean>;
     signOut: () => Promise<void>;
     completeOnboarding: () => Promise<void>;
+    deleteAccount: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -36,6 +39,7 @@ const AuthContext = createContext<AuthContextType>({
     updateUserProfile: async () => false,
     signOut: async () => { },
     completeOnboarding: async () => { },
+    deleteAccount: async () => false,
 });
 
 export const useAuth = () => {
@@ -202,6 +206,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     };
 
+    const deleteAccount = async () => {
+        if (!user) {
+            console.error('No user is signed in to delete.');
+            return false;
+        }
+
+        try {
+            setIsLoading(true);
+            // First, delete all user data from Firestore
+            await userService.deleteUserAccount(user.uid);
+
+            // Then, delete the user from Firebase Authentication
+            await deleteUser(user);
+
+            // Sign out and redirect
+            await signOut();
+            return true;
+        } catch (error) {
+            console.error('Failed to delete account:', error);
+            // If deletion fails, you might want to re-authenticate the user
+            // or show a specific error message.
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const value = {
         user,
         isLoading,
@@ -213,6 +244,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         updateUserProfile,
         signOut,
         completeOnboarding,
+        deleteAccount,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

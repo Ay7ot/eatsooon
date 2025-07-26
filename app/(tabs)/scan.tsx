@@ -9,6 +9,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Dimensions,
+    Linking,
     Modal,
     Platform,
     Pressable,
@@ -252,9 +253,18 @@ export default function ScanScreen() {
                 <CustomAppBar title="Eatsooon" />
                 <View style={styles.centerContent}>
                     <MaterialIcons name="camera-alt" size={64} color={Colors.textTertiary} />
-                    <Text style={styles.permissionText}>{t('scan_camera_permission_required')}</Text>
-                    <Pressable style={styles.permissionButton} onPress={requestPermission}>
-                        <Text style={styles.permissionButtonText}>{t('scan_grant_permission')}</Text>
+                    <Text style={styles.permissionText}>
+                        {permission.canAskAgain
+                            ? t('scan_camera_permission_required')
+                            : t('scan_camera_permission_denied_permanently')}
+                    </Text>
+                    <Pressable
+                        style={styles.permissionButton}
+                        onPress={permission.canAskAgain ? requestPermission : () => Linking.openSettings()}
+                    >
+                        <Text style={styles.permissionButtonText}>
+                            {permission.canAskAgain ? t('scan_grant_permission') : t('scan_open_settings')}
+                        </Text>
                     </Pressable>
                 </View>
             </View>
