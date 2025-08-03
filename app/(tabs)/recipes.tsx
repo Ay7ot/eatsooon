@@ -1,6 +1,7 @@
 import CustomAppBar from '@/components/ui/CustomAppBar';
 import { Colors } from '@/constants/Colors';
 import RecipeImage from '@/src/components/ui/RecipeImage';
+import { useLanguage } from '@/src/localization/LanguageContext';
 import { FoodItem } from '@/src/models/FoodItem';
 import { Recipe, getCategoryColor } from '@/src/models/RecipeModel';
 import { activityService } from '@/src/services/ActivityService';
@@ -29,6 +30,7 @@ import {
 export default function RecipesScreen() {
     const { t } = useTranslation();
     const { user } = useAuth();
+    const { currentLanguage } = useLanguage();
     const router = useRouter();
     const [recipes, setRecipes] = useState<Recipe[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -51,7 +53,7 @@ export default function RecipesScreen() {
 
     useEffect(() => {
         fetchRecipes();
-    }, [user]);
+    }, [user, currentLanguage]);
 
     const fetchAllItems = async () => {
         setIsLoadingIngredients(true);
@@ -164,6 +166,9 @@ export default function RecipesScreen() {
         setIsLoading(true);
         setError(null);
 
+        // Clear selected ingredients when fetching default recipes
+        setSelectedIngredients([]);
+
         // Show an interstitial ad only the very first time the screen loads
         if (!hasShownInitialAd) {
             adMobService.showInterstitialAdOnTrigger('recipe_loading');
@@ -224,16 +229,21 @@ export default function RecipesScreen() {
         }
     };
 
+    const handleClearSearch = () => {
+        setSearchQuery('');
+        fetchRecipes();
+    };
+
     const handleRecipePress = async (recipe: Recipe) => {
         // Log activity
         await activityService.logRecipeViewed(recipe.title, recipe.imageUrl);
 
         // Show interstitial ad occasionally
-        adMobService.showInterstitialAdOnTrigger('recipe_view');
+        // adMobService.showInterstitialAdOnTrigger('recipe_view');
 
         router.push({
             pathname: '/recipe-detail',
-            params: { recipeId: recipe.id.toString() }
+            params: { recipeData: JSON.stringify(recipe) }
         });
     };
 
@@ -304,7 +314,9 @@ export default function RecipesScreen() {
                 <Text style={styles.headerSubtitle}>
                     {selectedIngredients.length > 0
                         ? t('recipes_using_selected', { count: selectedIngredients.length })
-                        : t('recipes_using_expiring', 'Using expiring ingredients')}
+                        : searchQuery.trim()
+                            ? t('recipes_search_results', 'Search results')
+                            : t('recipes_using_expiring', 'Using expiring ingredients')}
                 </Text>
             </View>
 
@@ -314,7 +326,7 @@ export default function RecipesScreen() {
                     <MaterialIcons name="search" size={20} color="#9CA3AF" />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder={t('search_recipes', 'Search recipes...')}
+                        placeholder={t('search_recipes')}
                         placeholderTextColor="#9CA3AF"
                         value={searchQuery}
                         onChangeText={setSearchQuery}
@@ -322,7 +334,7 @@ export default function RecipesScreen() {
                         returnKeyType="search"
                     />
                     {searchQuery.length > 0 && (
-                        <Pressable onPress={() => setSearchQuery('')}>
+                        <Pressable onPress={handleClearSearch}>
                             <MaterialIcons name="close" size={20} color="#9CA3AF" />
                         </Pressable>
                     )}

@@ -47,7 +47,13 @@
         }
       ],
       "expo-localization",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/logo.png",
+          "color": "#E87EA1"
+        }
+      ],
       "expo-background-task",
       [
         "react-native-google-mobile-ads",

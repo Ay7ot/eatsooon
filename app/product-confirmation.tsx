@@ -1,9 +1,9 @@
 import CustomAppBar from '@/components/ui/CustomAppBar';
 import { Colors } from '@/constants/Colors';
-import { adMobService } from '@/src/services/AdMobService';
+import { useAuth } from '@/src/services/AuthContext';
+import { expiryNotificationService } from '@/src/services/ExpiryNotificationService';
 import { familyService } from '@/src/services/FamilyService';
 import { inventoryService } from '@/src/services/InventoryService';
-import { notificationService } from '@/src/services/notifications/NotificationService';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { isValid, parse } from 'date-fns';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -137,6 +137,7 @@ function CustomAlert({ visible, title, message, buttons, onClose }: CustomAlertP
 }
 
 export default function ProductConfirmationScreen() {
+    const { user } = useAuth();
     const { t } = useTranslation();
     const params = useLocalSearchParams();
 
@@ -252,7 +253,7 @@ export default function ProductConfirmationScreen() {
             const qtyNum = quantity.trim() ? parseFloat(quantity) : 1;
             const familyId = scope === 'family' ? currentFamilyId : null;
 
-            await inventoryService.addFoodItem({
+            const itemId = await inventoryService.addFoodItem({
                 name: productName.trim(),
                 expirationDate: expiryDate,
                 category: selectedCategory || 'other',
@@ -262,11 +263,18 @@ export default function ProductConfirmationScreen() {
                 familyId: familyId,
             });
 
-            // Trigger notification update
-            notificationService.runForegroundUpdate();
+            console.log(`✅ Item added to ${scope} pantry with ID: ${itemId}`);
 
-            // Show interstitial ad occasionally after successful item addition
-            await adMobService.showInterstitialAdOnTrigger('item_added');
+            // Trigger expiry notification check after adding item
+            await expiryNotificationService.scheduleNotificationsForNewItem({
+                id: itemId,
+                name: productName.trim(),
+                expirationDate: expiryDate,
+                category: selectedCategory || 'other',
+                quantity: parseFloat(quantity) || 1,
+                unit: selectedUnit || 'pieces',
+                imageUrl: productImageUrl || '',
+            });
 
             setShowAlert({
                 visible: true,
@@ -280,6 +288,7 @@ export default function ProductConfirmationScreen() {
                 ]
             });
         } catch (error) {
+            console.error('❌ Error adding item to pantry:', error);
             setShowAlert({
                 visible: true,
                 title: t('confirm_error_title'),

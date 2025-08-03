@@ -429,6 +429,11 @@
   "act_inventory_cleared_title": "Inventario limpiado",
   "act_inventory_cleared_sub": "{{itemCount}} artículos eliminados",
 
+  "confirm_pantry_choice_title": "Elegir despensa",
+  "confirm_pantry_choice_message": "Dónde te gustaría agregar {{name}}?",
+  "confirm_pantry_choice_personal": "Mi despensa",
+  "confirm_pantry_choice_family": "Despensa familiar",
+
   "onboarding_skip": "Omitir",
   "onboarding_welcome_title": "Bienvenido a Eatsooon!",
   "onboarding_welcome_subtitle": "Tu viaje para reducir el desperdicio de alimentos comienza aquí. ¡Exploremos lo que hace especial a nuestra aplicación!",
@@ -473,7 +478,10 @@
   "recipes_clear_selection": "Limpiar Todo",
   "recipes_select_all": "Seleccionar Todo",
   "recipes_using_selected": "Usando {{count}} ingredientes seleccionados",
+  "recipes_search_results": "Resultados de búsqueda",
   "recipes_using_expiring": "Usando ingredientes que vencen",
   "recipes_loading_ingredients": "Cargando tus ingredientes...",
-  "recipes_ingredient_modal_close": "Cerrar"
+  "recipes_ingredient_modal_close": "Cerrar",
+
+  "search_recipes": "Buscar recetas..."
 }

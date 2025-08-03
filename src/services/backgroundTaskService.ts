@@ -1,6 +1,6 @@
 import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
-import { notificationService } from './notifications/NotificationService';
+import { expiryNotificationService } from './ExpiryNotificationService';
 
 const TASK_NAME = 'check-expiring-items-task';
 
@@ -8,7 +8,7 @@ const TASK_NAME = 'check-expiring-items-task';
 TaskManager.defineTask(TASK_NAME, async () => {
     try {
         console.log('Background task started: Checking for expiring items...');
-        await notificationService.scheduleInventoryNotifications();
+        await expiryNotificationService.checkAndScheduleNotifications();
         console.log('Background task finished successfully.');
         return BackgroundTask.BackgroundTaskResult.Success;
     } catch (error) {
@@ -29,8 +29,8 @@ export async function registerBackgroundTask() {
             return;
         }
 
-        // Request permissions first
-        await notificationService.registerForPushNotificationsAsync();
+        // Set up notification channels
+        await expiryNotificationService.setupNotificationChannels();
 
         // TODO: The `stopOnTerminate` and `startOnBoot` options were removed to resolve a linting error.
         // These are valid options for iOS and Android respectively and should be re-enabled
@@ -63,7 +63,7 @@ export async function unregisterBackgroundTask() {
 export async function testBackgroundTask() {
     try {
         console.log('Manually triggering background task for testing...');
-        await notificationService.scheduleInventoryNotifications();
+        await expiryNotificationService.checkAndScheduleNotifications();
         console.log('Test task finished. Check for scheduled notifications.');
     } catch (error) {
         console.error('❌ Test background task failed:', error);
