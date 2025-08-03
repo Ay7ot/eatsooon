@@ -460,6 +460,12 @@
 
   "notification_expiring_title": "Eat Soon Reminder",
   "notification_expiring_body": "You have {{count}} items expiring soon. Check your inventory!",
+  "notification_expires_today_title": "🚨 Expiring Today!",
+  "notification_expires_today_body": "{{itemName}} expires today. Use it now!",
+  "notification_expires_tomorrow_title": "⏰ Expires Tomorrow",
+  "notification_expires_tomorrow_body": "{{itemName}} expires in 1 day",
+  "notification_expires_soon_title": "📅 Expiring Soon",
+  "notification_expires_soon_body": "{{itemName}} expires in 3 days",
   "notification_test_title": "Test Notification",
   "notification_test_body": "Found {{count}} expiring items in test mode",
   "notification_channel_name": "Expiring Items",
