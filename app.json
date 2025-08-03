@@ -3,7 +3,7 @@
     "name": "eatsooon",
     "displayName": "Eatsooon",
     "slug": "eatsooon",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
     "scheme": "eatsooon",
@@ -13,7 +13,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.miqui.eatsooon",
       "appleTeamId": "88NCV6QJ5S",
-      "buildNumber": "15",
+      "buildNumber": "16",
       "infoPlist": {
         "UIBackgroundModes": ["fetch", "processing"],
         "ITSAppUsesNonExemptEncryption": false
@@ -27,7 +27,7 @@
       "edgeToEdgeEnabled": true,
       "permissions": ["android.permission.CAMERA"],
       "package": "com.miqui.eatsooon",
-      "versionCode": 15,
+      "versionCode": 16,
       "privacyPolicy": "https://miqui.com/privacy-policy"
     },
     "web": {

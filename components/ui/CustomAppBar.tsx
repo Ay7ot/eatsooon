@@ -32,7 +32,7 @@ export default function CustomAppBar({ title, onSettingsPress }: CustomAppBarPro
                     <Pressable
                         style={styles.settingsButton}
                         onPress={onSettingsPress}
-                        android_ripple={{ color: 'rgba(0,0,0,0.1)', borderless: true }}
+                        // android_ripple={{ color: 'rgba(203, 201, 201, 0.1)', borderless: true }}
                     >
                         <MaterialIcons name="settings" size={24} color={Colors.secondaryColor} />
                     </Pressable>

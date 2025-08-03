@@ -449,6 +449,12 @@
 
   "notification_expiring_title": "Recordatorio de Eat Soon",
   "notification_expiring_body": "Tienes {{count}} artículos que vencen pronto. ¡Revisa tu inventario!",
+  "notification_expires_today_title": "🚨 ¡Vence Hoy!",
+  "notification_expires_today_body": "{{itemName}} vence hoy. ¡Úsalo ahora!",
+  "notification_expires_tomorrow_title": "⏰ Vence Mañana",
+  "notification_expires_tomorrow_body": "{{itemName}} vence en 1 día",
+  "notification_expires_soon_title": "📅 Vence Pronto",
+  "notification_expires_soon_body": "{{itemName}} vence en 3 días",
   "notification_test_title": "Notificación de Prueba",
   "notification_test_body": "Se encontraron {{count}} artículos que vencen en modo de prueba",
   "notification_channel_name": "Artículos por Vencer",

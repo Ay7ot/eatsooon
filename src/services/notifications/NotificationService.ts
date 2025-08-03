@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import i18n from '../../localization/i18n';
 import { FoodItem } from '../../models/FoodItem';
 import { inventoryService } from '../InventoryService';
 
@@ -167,16 +168,16 @@ class NotificationService {
         let priority = 'normal';
 
         if (diffDays === 0) {
-            title = `🚨 Expiring Today!`;
-            body = `${item.name} expires today. Use it now!`;
+            title = i18n.t('notification_expires_today_title');
+            body = i18n.t('notification_expires_today_body', { itemName: item.name });
             priority = 'high';
         } else if (diffDays === 1) {
-            title = `⏰ Expires Tomorrow`;
-            body = `${item.name} expires in 1 day`;
+            title = i18n.t('notification_expires_tomorrow_title');
+            body = i18n.t('notification_expires_tomorrow_body', { itemName: item.name });
             priority = 'high';
         } else if (diffDays === 3) {
-            title = `📅 Expiring Soon`;
-            body = `${item.name} expires in 3 days`;
+            title = i18n.t('notification_expires_soon_title');
+            body = i18n.t('notification_expires_soon_body', { itemName: item.name });
             priority = 'normal';
         }
 

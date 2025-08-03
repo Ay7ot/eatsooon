@@ -23,7 +23,7 @@
     <key>CFBundlePackageType</key>
     <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.1</string>
+    <string>1.0.2</string>
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleURLTypes</key>
@@ -43,7 +43,7 @@
       </dict>
     </array>
     <key>CFBundleVersion</key>
-    <string>15</string>
+    <string>16</string>
     <key>GADApplicationIdentifier</key>
     <string>ca-app-pub-9752685758154877~1842177589</string>
     <key>GADDelayAppMeasurementInit</key>
@@ -62,7 +62,7 @@
       <true/>
     </dict>
     <key>NSCameraUsageDescription</key>
-    <string>To help you quickly add items to your inventory, our app uses your camera to scan barcodes and automatically identify products. You can also scan the expiry date on your food items to get timely reminders before they go bad.</string>
+    <string>Allow $(PRODUCT_NAME) to access your camera</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your microphone</string>
     <key>NSPhotoLibraryUsageDescription</key>
