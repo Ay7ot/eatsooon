@@ -3,8 +3,8 @@ import CustomTextField from '@/components/ui/CustomTextField';
 import LoadingButton from '@/components/ui/LoadingButton';
 import { Colors } from '@/constants/Colors';
 import { daysUntilExpiration } from '@/src/models/FoodItem';
+import { expiryNotificationService } from '@/src/services/ExpiryNotificationService';
 import { inventoryService } from '@/src/services/InventoryService';
-import { notificationService } from '@/src/services/notifications/NotificationService';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
@@ -220,7 +220,15 @@ export default function InventoryItemDetailScreen() {
             });
 
             // Trigger notification update
-            notificationService.runForegroundUpdate();
+            await expiryNotificationService.updateNotificationsForItem({
+                id: params.itemId,
+                name: productName.trim(),
+                expirationDate: expiryDate,
+                category,
+                quantity: parseFloat(quantity) || 1,
+                unit,
+                imageUrl,
+            });
 
             setShowAlert({
                 visible: true,
@@ -259,7 +267,7 @@ export default function InventoryItemDetailScreen() {
             await inventoryService.deleteFoodItem(params.itemId, familyId);
 
             // Trigger notification update
-            notificationService.runForegroundUpdate();
+            await expiryNotificationService.removeNotificationsForItem(params.itemId);
 
             setShowAlert({
                 visible: true,

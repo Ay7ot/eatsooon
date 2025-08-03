@@ -14,9 +14,6 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-const LAST_NOTIFICATION_CHECK_KEY = 'last_notification_check_timestamp';
-const FOREGROUND_CHECK_INTERVAL = 4 * 60 * 60 * 1000; // 4 hours
-
 type InventoryScope = 'user' | 'family';
 
 export default function HomeScreen() {

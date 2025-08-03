@@ -148,7 +148,7 @@ class AdMobService {
  */
     async showInterstitialAdOnTrigger(trigger: 'recipe_view' | 'scan_complete' | 'item_added' | 'recipe_loading'): Promise<void> {
         // Only show ads 30% of the time (or 80% in dev for testing)
-        const shouldShowAd = __DEV__ ? Math.random() < 0.8 : Math.random() < 0.3;
+        const shouldShowAd = __DEV__ ? Math.random() < 0.15 : Math.random() < 0.1;
 
         if (shouldShowAd) {
             console.log(`Attempting to show interstitial ad for trigger: ${trigger}`);
@@ -173,7 +173,7 @@ class AdMobService {
                 setTimeout(() => this.loadInterstitialAd(), 1000);
             }
         } else {
-            console.log(`Skipping interstitial ad for trigger: ${trigger} (${__DEV__ ? '80%' : '30%'} chance)`);
+            console.log(`Skipping interstitial ad for trigger: ${trigger} (${__DEV__ ? '15%' : '10%'} chance)`);
         }
     }
 }

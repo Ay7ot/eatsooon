@@ -3,6 +3,7 @@ import { adMobService } from '@/src/services/AdMobService';
 import { AuthProvider } from '@/src/services/AuthContext';
 import { AuthGate } from '@/src/services/AuthGate';
 import { registerBackgroundTask } from '@/src/services/backgroundTaskService';
+import { expiryNotificationService } from '@/src/services/ExpiryNotificationService';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -34,6 +35,10 @@ export default function RootLayout() {
 
       // Initialize AdMob
       adMobService.initialize();
+
+      // Initialize expiry notifications
+      expiryNotificationService.setupNotificationChannels();
+      expiryNotificationService.checkAndScheduleNotifications();
     }
   }, [loaded]);
 

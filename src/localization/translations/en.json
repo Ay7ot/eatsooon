@@ -484,7 +484,10 @@
   "recipes_clear_selection": "Clear All",
   "recipes_select_all": "Select All",
   "recipes_using_selected": "Using {{count}} selected ingredients",
+  "recipes_search_results": "Search results",
   "recipes_using_expiring": "Using expiring ingredients",
   "recipes_loading_ingredients": "Loading your ingredients...",
-  "recipes_ingredient_modal_close": "Close"
+  "recipes_ingredient_modal_close": "Close",
+
+  "search_recipes": "Search recipes..."
 }

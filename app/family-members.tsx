@@ -255,7 +255,7 @@ export default function FamilyMembersScreen() {
 
         setDeleteFamilyLoading(true);
         try {
-            const result = await familyService.deleteFamily(currentFamilyId);
+            const result = await familyService.deleteFamily(currentFamilyId, user?.uid);
             setConfirmDeleteFamilyModal(false);
             
             if (result.switchedToFamily) {
