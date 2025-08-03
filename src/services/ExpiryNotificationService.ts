@@ -70,13 +70,10 @@ class ExpiryNotificationService {
             const delivered = await this.getDeliveredNotifications();
             const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
             const cleaned = new Set([...delivered].filter(id => {
-                // Extract timestamp from notification ID if it exists
-                const parts = id.split('-');
-                if (parts.length >= 4) {
-                    const timestamp = parseInt(parts[3]);
-                    return timestamp > thirtyDaysAgo;
-                }
-                return true; // Keep if we can't parse timestamp
+                // For the new ID format (expiry-itemId-days), we'll keep all for now
+                // since we don't have timestamps in the ID anymore
+                // In the future, we could add a separate timestamp field if needed
+                return true; // Keep all delivered notifications for now
             }));
             await AsyncStorage.setItem(DELIVERED_NOTIFICATIONS_KEY, JSON.stringify([...cleaned]));
         } catch (error) {
@@ -153,12 +150,13 @@ class ExpiryNotificationService {
     /**
      * Update notifications for an item that has been modified
      * This clears old notifications and schedules new ones based on updated expiry date
+     * Note: We do NOT clear delivered notifications here - only when items are deleted
      */
     async updateNotificationsForItem(item: FoodItem): Promise<void> {
         try {
             console.log(`📅 [ExpiryNotificationService] Updating notifications for item: "${item.name}"`);
 
-            // Clear existing notifications for this item
+            // Clear existing scheduled notifications for this item (but keep delivered notifications)
             await this.clearNotificationsForItem(item.id);
 
             // Schedule new notifications based on updated expiry date
@@ -195,8 +193,27 @@ class ExpiryNotificationService {
         try {
             console.log(`🗑️ [ExpiryNotificationService] Removing notifications for deleted item: ${itemId}`);
             await this.clearNotificationsForItem(itemId);
+
+            // Also clear delivered notifications for this item
+            await this.clearDeliveredNotificationsForItem(itemId);
         } catch (error) {
             console.error(`❌ [ExpiryNotificationService] Failed to remove notifications for item ${itemId}:`, error);
+        }
+    }
+
+    /**
+     * Clear delivered notifications for a specific item
+     * Only called when items are deleted, not when updated
+     */
+    private async clearDeliveredNotificationsForItem(itemId: string): Promise<void> {
+        try {
+            const delivered = await this.getDeliveredNotifications();
+            const itemPrefix = `expiry-${itemId}-`;
+            const cleaned = new Set([...delivered].filter(id => !id.startsWith(itemPrefix)));
+            await AsyncStorage.setItem(DELIVERED_NOTIFICATIONS_KEY, JSON.stringify([...cleaned]));
+            console.log(`🗑️ [ExpiryNotificationService] Cleared delivered notifications for item ${itemId} (item deleted)`);
+        } catch (error) {
+            console.warn(`Failed to clear delivered notifications for item ${itemId}:`, error);
         }
     }
 
@@ -297,8 +314,8 @@ class ExpiryNotificationService {
             secondsFromNow = Math.max(1, secondsFromNow);
 
             // 4. Check if this notification is already scheduled or delivered to prevent duplicates
-            const timestamp = Date.now();
-            const notificationId = `expiry-${item.id}-${daysUntilExpiry}-${timestamp}`;
+            // Use a stable ID format that doesn't include timestamp to enable proper delivered tracking
+            const notificationId = `expiry-${item.id}-${daysUntilExpiry}`;
             const existingNotifications = await Notifications.getAllScheduledNotificationsAsync();
             const alreadyScheduled = existingNotifications.some(n => n.identifier === notificationId);
 
@@ -603,6 +620,19 @@ class ExpiryNotificationService {
     async markNotificationAsDeliveredPublic(notificationId: string): Promise<void> {
         await this.markNotificationAsDelivered(notificationId);
         console.log(`📱 [ExpiryNotificationService] Marked notification as delivered: ${notificationId}`);
+    }
+
+    /**
+     * Get delivered notifications for debugging
+     */
+    async getDeliveredNotificationsDebug(): Promise<string[]> {
+        try {
+            const delivered = await this.getDeliveredNotifications();
+            return Array.from(delivered);
+        } catch (error) {
+            console.error('Failed to get delivered notifications for debug:', error);
+            return [];
+        }
     }
 
     /**

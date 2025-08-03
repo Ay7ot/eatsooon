@@ -41,23 +41,96 @@ class ScannerService {
 
     // OpenFoodFacts API integration
     async getProductInfo(barcode: string): Promise<ProductInfo | null> {
+        const startTime = Date.now();
+        const apiUrl = `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`;
+
         try {
-            console.log(`Fetching product info for barcode: ${barcode}`);
-            const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+            console.log(`🔍 [ScannerService] Starting API call for barcode: ${barcode}`);
+            console.log(`🌐 [ScannerService] API URL: ${apiUrl}`);
+
+            const response = await fetch(apiUrl);
+            const responseTime = Date.now() - startTime;
+
+            console.log(`⏱️ [ScannerService] API response time: ${responseTime}ms`);
+            console.log(`📡 [ScannerService] Response status: ${response.status}`);
+            console.log(`📡 [ScannerService] Response ok: ${response.ok}`);
+
+            if (!response.ok) {
+                console.error(`❌ [ScannerService] HTTP error: ${response.status} ${response.statusText}`);
+                return null;
+            }
+
             const data = await response.json();
+            const totalTime = Date.now() - startTime;
+
+            console.log(`📊 [ScannerService] API response data:`, {
+                status: data.status,
+                statusVerbose: data.statusVerbose,
+                productFound: !!data.product,
+                productKeys: data.product ? Object.keys(data.product) : [],
+                totalTime: `${totalTime}ms`
+            });
 
             if (data.status === 1 && data.product) {
                 const product = data.product;
-                return {
+
+                // Log detailed product information
+                console.log(`📦 [ScannerService] Product details:`, {
+                    barcode: barcode,
+                    productName: product.product_name,
+                    productNameEn: product.product_name_en,
+                    genericName: product.generic_name,
+                    brands: product.brands,
+                    categories: product.categories,
+                    imageUrl: product.image_url,
+                    imageFrontUrl: product.image_front_url,
+                    imageIngredientsUrl: product.image_ingredients_url,
+                    imageNutritionUrl: product.image_nutrition_url,
+                    imagePackagingUrl: product.image_packaging_url,
+                    imageSmallUrl: product.image_small_url,
+                    imageThumbUrl: product.image_thumb_url,
+                    imageTinyUrl: product.image_tiny_url,
+                    hasImage: !!(product.image_url || product.image_front_url),
+                    hasProductName: !!(product.product_name || product.product_name_en),
+                    hasCategories: !!product.categories
+                });
+
+                const productInfo = {
                     productName: product.product_name || product.product_name_en,
                     category: this.mapCategory(product.categories),
                     imageUrl: product.image_url || product.image_front_url,
                     barcode: barcode,
                 };
+
+                console.log(`✅ [ScannerService] Successfully processed product:`, {
+                    finalProductName: productInfo.productName,
+                    finalCategory: productInfo.category,
+                    finalImageUrl: productInfo.imageUrl,
+                    hasProductName: !!productInfo.productName,
+                    hasCategory: !!productInfo.category,
+                    hasImage: !!productInfo.imageUrl
+                });
+
+                return productInfo;
+            } else {
+                console.warn(`⚠️ [ScannerService] Product not found or invalid response:`, {
+                    barcode: barcode,
+                    status: data.status,
+                    statusVerbose: data.statusVerbose,
+                    hasProduct: !!data.product,
+                    errorMessage: data.statusVerbose || 'Unknown error'
+                });
+                return null;
             }
-            return null;
         } catch (error) {
-            console.error('Error fetching product info:', error);
+            const totalTime = Date.now() - startTime;
+            console.error(`❌ [ScannerService] Error fetching product info:`, {
+                barcode: barcode,
+                error: error,
+                errorMessage: error instanceof Error ? error.message : 'Unknown error',
+                totalTime: `${totalTime}ms`,
+                apiUrl: apiUrl
+            });
             return null;
         }
     }
@@ -84,24 +157,56 @@ class ScannerService {
 
     // Process barcode scan result
     async processBarcodeResult(barcodeResult: BarcodeScanningResult): Promise<ScanResult> {
+        const startTime = Date.now();
+
         try {
             const barcode = barcodeResult.data;
-            console.log(`Processing barcode: ${barcode}`);
+            console.log(`🔍 [ScannerService] Processing barcode scan result:`, {
+                barcode: barcode,
+                barcodeType: barcodeResult.type,
+                timestamp: new Date().toISOString()
+            });
 
             // Get product info from OpenFoodFacts
             const productInfo = await this.getProductInfo(barcode);
+            const processingTime = Date.now() - startTime;
 
-            return {
+            // Even if product isn't found, we can still provide a useful result
+            // The scan was successful if we got a valid barcode, regardless of whether the product exists in the database
+            const isSuccess = !!barcode && barcode.length > 0;
+
+            const result = {
                 productInfo: productInfo ?? undefined,
                 detectedBarcode: barcode,
                 allDetectedDates: [],
                 barcodeCount: 1,
                 hasProductInfo: productInfo !== null,
                 hasExpiryDate: false,
-                isSuccess: true,
+                isSuccess: isSuccess,
+                errorMessage: productInfo === null ? 'Product not found in database' : undefined
             };
+
+            console.log(`📊 [ScannerService] Barcode processing result:`, {
+                barcode: barcode,
+                hasProductInfo: result.hasProductInfo,
+                productName: result.productInfo?.productName || 'N/A',
+                category: result.productInfo?.category || 'N/A',
+                hasImage: !!result.productInfo?.imageUrl,
+                imageUrl: result.productInfo?.imageUrl || 'N/A',
+                processingTime: `${processingTime}ms`,
+                success: result.isSuccess,
+                errorMessage: result.errorMessage
+            });
+
+            return result;
         } catch (error) {
-            console.error('Error processing barcode:', error);
+            const processingTime = Date.now() - startTime;
+            console.error(`❌ [ScannerService] Error processing barcode:`, {
+                barcode: barcodeResult.data,
+                error: error,
+                errorMessage: error instanceof Error ? error.message : 'Unknown error',
+                processingTime: `${processingTime}ms`
+            });
             return this.createErrorResult(`Failed to process barcode: ${error}`);
         }
     }
@@ -110,8 +215,12 @@ class ScannerService {
     extractExpiryDates(text: string): string[] {
         const dates: string[] = [];
 
+        console.log(`🔍 [ScannerService] Extracting dates from text: "${text}"`);
+
         // Pre-process text: remove spaces around separators to handle OCR errors
         const cleanText = text.replace(/\s*([/\-.])\s*/g, '$1');
+
+        console.log(`🔍 [ScannerService] Cleaned text: "${cleanText}"`);
 
         // Keywords and patterns to look for. Ordered by priority.
         const datePatterns = [
@@ -120,6 +229,10 @@ class ScannerService {
             /(?:EXP|BB|BEST BY|BEST BEFORE|USE BY|CONSUMIR PREF|CAD|VENCE|FECHA DE VENCIMIENTO)[:\s.]*(\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4})/gi,
             /(?:EXP|BB|BEST BY|BEST BEFORE|USE BY|CONSUMIR PREF|CAD|VENCE|FECHA DE VENCIMIENTO)[:\s.]*(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Ene|Feb|Mar|Abr|May|Jun|Jul|Ago|Sep|Oct|Nov|Dic)\s+\d{2,4})/gi,
             /(?:EXP|BB|BEST BY|BEST BEFORE|USE BY|CONSUMIR PREF|CAD|VENCE|FECHA DE VENCIMIENTO)[:\s.]*((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Ene|Feb|Mar|Abr|May|Jun|Jul|Ago|Sep|Oct|Nov|Dic)\s+\d{1,2},?\s+\d{2,4})/gi,
+
+            // Manufacturing and expiry date keywords (MFD, BB, etc.)
+            /(?:MFD|MANUFACTURING|BB|BEST BY|BEST BEFORE|EXP|EXPIRY)[:\s.]*(\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4})/gi,
+            /(?:MFD|MANUFACTURING|BB|BEST BY|BEST BEFORE|EXP|EXPIRY)[:\s.]*(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Ene|Feb|Mar|Abr|May|Jun|Jul|Ago|Sep|Oct|Nov|Dic)\s+\d{2,4})/gi,
 
             // Standalone dates (most specific first to avoid ambiguity)
             /\b\d{4}[/\-.]\d{1,2}[/\-.]\d{1,2}\b/g, // YYYY-MM-DD
@@ -142,6 +255,10 @@ class ScannerService {
             // Military/Industrial format (YY-MM-DD)
             /\b\d{2}-\d{2}-\d{2}\b/g, // YY-MM-DD
 
+            // Colon-separated dates (DD:MM:YY format)
+            /\b\d{1,2}:\d{1,2}:\d{2}\b/g, // DD:MM:YY (e.g., 31:05:25)
+            /\b\d{1,2}:\d{1,2}:\d{4}\b/g, // DD:MM:YYYY (e.g., 31:05:2025)
+
             // Full month names
             /\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December|Enero|Febrero|Marzo|Abril|Mayo|Junio|Julio|Agosto|Septiembre|Octubre|Noviembre|Diciembre)\s+\d{2,4}\b/gi,
             /\b(?:January|February|March|April|May|June|July|August|September|October|November|December|Enero|Febrero|Marzo|Abril|Mayo|Junio|Julio|Agosto|Septiembre|Octubre|Noviembre|Diciembre)\s+\d{1,2},?\s+\d{2,4}\b/gi,
@@ -162,16 +279,25 @@ class ScannerService {
             let match;
             while ((match = pattern.exec(cleanText)) !== null) {
                 // If the pattern has a capturing group for the date, use it. Otherwise, use the full match.
-                dates.push(match[1] ? match[1].trim() : match[0].trim());
+                const dateFound = match[1] ? match[1].trim() : match[0].trim();
+                dates.push(dateFound);
+                console.log(`📅 [ScannerService] Found date: "${dateFound}" with pattern: ${pattern.source}`);
             }
         });
 
-        return [...new Set(dates)]; // Return unique dates
+        const uniqueDates = [...new Set(dates)];
+        console.log(`📅 [ScannerService] Extracted ${uniqueDates.length} unique dates:`, uniqueDates);
+        return uniqueDates; // Return unique dates
     }
 
     // Get the best expiry date from detected dates
     getBestExpiryDate(dates: string[]): string | null {
-        if (dates.length === 0) return null;
+        if (dates.length === 0) {
+            console.log(`📅 [ScannerService] No dates to process`);
+            return null;
+        }
+
+        console.log(`📅 [ScannerService] Processing ${dates.length} dates for best expiry date`);
 
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -180,16 +306,21 @@ class ScannerService {
 
         for (const dateStr of dates) {
             const parsedDate = this.tryParseDate(dateStr);
+            console.log(`📅 [ScannerService] Parsing "${dateStr}" -> ${parsedDate ? parsedDate.toISOString() : 'failed'}`);
+
             if (parsedDate && parsedDate >= startOfToday) {
                 // If it's a valid future date
                 if (!bestDate || parsedDate < bestDate) {
                     // Choose the soonest valid future date
                     bestDate = parsedDate;
+                    console.log(`📅 [ScannerService] New best date: ${parsedDate.toISOString()}`);
                 }
             }
         }
 
-        return bestDate ? bestDate.toISOString() : null;
+        const result = bestDate ? bestDate.toISOString() : null;
+        console.log(`📅 [ScannerService] Final best expiry date: ${result}`);
+        return result;
     }
 
     // Helper to try multiple parsing formats
@@ -232,6 +363,10 @@ class ScannerService {
             'yy-MM-dd', // Military format
             'yyyy-MM-dd\'T\'HH:mm:ss', // ISO 8601
             'MM/dd/yyyy', 'M/d/yyyy', // 2-digit month/day
+
+            // Colon-separated formats (DD:MM:YY and DD:MM:YYYY)
+            'dd:MM:yy', 'd:M:yy',
+            'dd:MM:yyyy', 'd:M:yyyy',
         ];
 
         for (const format of formats) {
@@ -279,6 +414,10 @@ class ScannerService {
         for (const [roman, arabic] of Object.entries(romanMonths)) {
             processed = processed.replace(new RegExp(`\\b${roman}\\b`, 'gi'), arabic);
         }
+
+        // Handle colon-separated dates (convert DD:MM:YY to DD/MM/YY for parsing)
+        // This handles formats like "31:05:25" -> "31/05/25"
+        processed = processed.replace(/(\d{1,2}):(\d{1,2}):(\d{2,4})/g, '$1/$2/$3');
 
         return processed;
     }
