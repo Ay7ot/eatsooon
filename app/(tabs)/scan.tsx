@@ -120,26 +120,95 @@ export default function ScanScreen() {
 
         try {
             if (scanMode === ScanMode.PRODUCT) {
-                console.log('Barcode detected:', result.data);
+                console.log(`📱 [ScanScreen] Barcode detected:`, {
+                    barcode: result.data,
+                    type: result.type,
+                    timestamp: new Date().toISOString()
+                });
+
                 const scanResult = await scannerService.processBarcodeResult(result);
+
+                console.log(`📱 [ScanScreen] Scan result received:`, {
+                    isSuccess: scanResult.isSuccess,
+                    hasProductInfo: scanResult.hasProductInfo,
+                    hasExpiryDate: scanResult.hasExpiryDate,
+                    productName: scanResult.productInfo?.productName || 'N/A',
+                    category: scanResult.productInfo?.category || 'N/A',
+                    hasImage: !!scanResult.productInfo?.imageUrl,
+                    errorMessage: scanResult.errorMessage || 'N/A'
+                });
 
                 if (scanResult.isSuccess) {
                     await activityService.logScanPerformed(scanResult.productInfo?.productName);
-                    if (!scanResult.hasExpiryDate) {
-                        // We have product info but no expiry date - ask user to scan expiry date
-                        setInitialScanResult(scanResult);
-                        setScanMode(ScanMode.EXPIRY_DATE);
-                        setShowAlert({
-                            visible: true,
-                            title: t('scan_expiry_not_detected'),
-                            message: t('scan_please_scan_expiry'),
-                            buttons: [{ text: t('scan_ok'), onPress: () => { } }]
-                        });
+
+                    if (scanResult.hasProductInfo) {
+                        // Product found in database
+                        if (!scanResult.hasExpiryDate) {
+                            console.log(`📱 [ScanScreen] Product found but no expiry date - prompting user to scan expiry`);
+                            // We have product info but no expiry date - ask user to scan expiry date
+                            setInitialScanResult(scanResult);
+                            setScanMode(ScanMode.EXPIRY_DATE);
+                            setShowAlert({
+                                visible: true,
+                                title: t('scan_expiry_not_detected'),
+                                message: t('scan_please_scan_expiry'),
+                                buttons: [{ text: t('scan_ok'), onPress: () => { } }]
+                            });
+                        } else {
+                            console.log(`📱 [ScanScreen] Complete product info found - navigating to confirmation`);
+                            // We have all info - proceed to confirmation
+                            navigateToConfirmation(scanResult);
+                        }
                     } else {
-                        // We have all info - proceed to confirmation
-                        navigateToConfirmation(scanResult);
+                        // Product not found in database - inform user and offer options
+                        console.log(`📱 [ScanScreen] Product not found in database - informing user`);
+
+                        // Check if we have any OCR data (expiry dates) from the scan
+                        const hasOCRData = scanResult.allDetectedDates.length > 0 || scanResult.recognizedText;
+
+                        if (hasOCRData) {
+                            // We have some OCR data - offer to use it or manual entry
+                            setInitialScanResult(scanResult);
+                            setShowAlert({
+                                visible: true,
+                                title: t('scan_product_not_found'),
+                                message: t('scan_product_not_found_ocr_available'),
+                                buttons: [
+                                    {
+                                        text: t('scan_use_ocr_data'),
+                                        onPress: () => navigateToConfirmation(scanResult)
+                                    },
+                                    {
+                                        text: t('scan_manual_entry'),
+                                        onPress: handleManualEntry,
+                                        style: 'default'
+                                    }
+                                ]
+                            });
+                        } else {
+                            // No OCR data - inform user and offer manual entry
+                            console.log(`📱 [ScanScreen] No OCR data available - informing user and offering manual entry`);
+                            setShowAlert({
+                                visible: true,
+                                title: t('scan_product_not_found'),
+                                message: t('scan_product_not_found_no_ocr'),
+                                buttons: [
+                                    {
+                                        text: t('scan_manual_entry'),
+                                        onPress: handleManualEntry,
+                                        style: 'default'
+                                    },
+                                    {
+                                        text: t('scan_try_again'),
+                                        onPress: () => { }
+                                    }
+                                ]
+                            });
+                        }
                     }
                 } else {
+                    // Actual scan failure (not just product not found)
+                    console.log(`📱 [ScanScreen] Scan failed - showing error alert`);
                     setShowAlert({
                         visible: true,
                         title: t('scan_error'),
@@ -149,10 +218,11 @@ export default function ScanScreen() {
                 }
             } else {
                 // Expiry date mode - we already have product info, just need expiry
+                console.log(`📱 [ScanScreen] In expiry mode - navigating to confirmation`);
                 navigateToConfirmation(initialScanResult!);
             }
         } catch (error) {
-            console.error('Scanning error:', error);
+            console.error(`📱 [ScanScreen] Scanning error:`, error);
             setShowAlert({
                 visible: true,
                 title: t('scan_error'),
@@ -212,6 +282,7 @@ export default function ScanScreen() {
     };
 
     const handleManualEntry = () => {
+        console.log(`📱 [ScanScreen] User chose manual entry`);
         // Navigate to confirmation screen with empty data for manual entry
         router.push({
             pathname: '/product-confirmation',

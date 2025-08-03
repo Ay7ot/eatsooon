@@ -5,6 +5,7 @@ import { AuthGate } from '@/src/services/AuthGate';
 import { registerBackgroundTask } from '@/src/services/backgroundTaskService';
 import { expiryNotificationService } from '@/src/services/ExpiryNotificationService';
 import { useFonts } from 'expo-font';
+import * as Notifications from 'expo-notifications';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
@@ -39,6 +40,36 @@ export default function RootLayout() {
       // Initialize expiry notifications
       expiryNotificationService.setupNotificationChannels();
       expiryNotificationService.checkAndScheduleNotifications();
+
+      // Set up notification received listener to mark notifications as delivered
+      const notificationListener = Notifications.addNotificationReceivedListener((notification) => {
+        console.log(`📱 [App] Notification received: ${notification.request.identifier}`);
+
+        // Check if this is an expiry notification
+        if (notification.request.content.data?.type === 'expiry-alert') {
+          const notificationId = notification.request.identifier;
+          console.log(`📱 [App] Marking expiry notification as delivered: ${notificationId}`);
+          expiryNotificationService.markNotificationAsDeliveredPublic(notificationId);
+        }
+      });
+
+      // Set up notification response listener (when user taps notification)
+      const responseListener = Notifications.addNotificationResponseReceivedListener((response) => {
+        console.log(`📱 [App] Notification response received: ${response.notification.request.identifier}`);
+
+        // Check if this is an expiry notification
+        if (response.notification.request.content.data?.type === 'expiry-alert') {
+          const notificationId = response.notification.request.identifier;
+          console.log(`📱 [App] Marking expiry notification as delivered (tapped): ${notificationId}`);
+          expiryNotificationService.markNotificationAsDeliveredPublic(notificationId);
+        }
+      });
+
+      // Cleanup listeners on unmount
+      return () => {
+        notificationListener.remove();
+        responseListener.remove();
+      };
     }
   }, [loaded]);
 
